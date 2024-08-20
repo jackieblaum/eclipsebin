@@ -30,7 +30,8 @@ pip install your-package-name
 import eclipsebin as ebin
 
 # Example usage
-binned_light_curve = ebin.bin_light_curve(time_data, flux_data, num_bins=50)
+binner = EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, frac_in_ecl=0.2)
+bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
 ```
 
 Refer to the [documentation](https://github.com/yourusername/your-package-name) for more detailed usage instructions and examples.
