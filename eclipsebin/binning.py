@@ -33,7 +33,18 @@ class EclipsingBinaryBinner:
             flux_errors (np.ndarray): Array of flux errors.
             nbins (int, optional): Number of bins to use. Defaults to 200.
             fraction_in_eclipse (float, optional): Fraction of bins within eclipses. Defaults to 0.2.
+
+        Raises:
+            ValueError: If the number of data points is less than 10, or if the number of bins is less than 10,
+                        or if the number of data points is less than the number of bins.
         """
+        if len(phases) < 10:
+            raise ValueError("Number of data points must be at least 10.")
+        if nbins < 10:
+            raise ValueError("Number of bins must be at least 10.")
+        if len(phases) < nbins:
+            raise ValueError("Number of data points must be greater than or equal to the number of bins.")
+
         self.phases = phases
         self.fluxes = fluxes
         self.flux_errors = flux_errors
