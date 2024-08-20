@@ -14,36 +14,39 @@ class EclipsingBinaryBinner:
     Attributes:
         phases (np.ndarray): Array of phase values corresponding to the light curve.
         fluxes (np.ndarray): Array of flux values corresponding to the light curve.
-        fluxerrs (np.ndarray): Array of flux errors corresponding to the light curve.
+        flux_errors (np.ndarray): Array of flux errors corresponding to the light curve.
         nbins (int): Total number of bins to be used for the light curve.
-        frac_in_ecl (float): Fraction of bins allocated to the eclipse regions.
-        primary_min (float): Phase value of the primary eclipse minimum.
-        secondary_min (float): Phase value of the secondary eclipse minimum.
+        fraction_in_eclipse (float): Fraction of bins allocated to the eclipse regions.
+        primary_eclipse_min_phase (float): Phase value of the primary eclipse minimum.
+        secondary_eclipse_min_phase (float): Phase value of the secondary eclipse minimum.
         primary_eclipse (tuple): Start and end phase values of the primary eclipse.
         secondary_eclipse (tuple): Start and end phase values of the secondary eclipse.
     """
-    def __init__(self, phases, fluxes, fluxerrs, nbins=200, frac_in_ecl=0.2):
+
+    def __init__(self, phases, fluxes, flux_errors, nbins=200, fraction_in_eclipse=0.2):
         """
         Initializes the EclipsingBinaryBinner with the given light curve data and parameters.
 
         Args:
             phases (np.ndarray): Array of phase values.
             fluxes (np.ndarray): Array of flux values.
-            fluxerrs (np.ndarray): Array of flux errors.
+            flux_errors (np.ndarray): Array of flux errors.
             nbins (int, optional): Number of bins to use. Defaults to 200.
-            frac_in_ecl (float, optional): Fraction of bins within eclipses. Defaults to 0.2.
+            fraction_in_eclipse (float, optional): Fraction of bins within eclipses. Defaults to 0.2.
         """
         self.phases = phases
         self.fluxes = fluxes
-        self.fluxerrs = fluxerrs
+        self.flux_errors = flux_errors
         self.nbins = nbins
-        self.frac_in_ecl = frac_in_ecl
+        self.fraction_in_eclipse = fraction_in_eclipse
 
-        self.primary_min = self.find_minimum_flux()
-        self.secondary_min = self.find_secondary_minimum()
+        # Identify primary and secondary eclipse minima
+        self.primary_eclipse_min_phase = self.find_minimum_flux()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum()
 
-        self.primary_eclipse = self.find_eclipse(self.primary_min)
-        self.secondary_eclipse = self.find_eclipse(self.secondary_min)
+        # Determine start and end of each eclipse
+        self.primary_eclipse = self.get_eclipse_boundaries(self.primary_eclipse_min_phase)
+        self.secondary_eclipse = self.get_eclipse_boundaries(self.secondary_eclipse_min_phase)
 
     def find_minimum_flux(self):
         """
@@ -63,61 +66,63 @@ class EclipsingBinaryBinner:
         Returns:
             float: Phase value of the secondary eclipse minimum.
         """
-        mask = np.abs(self.phases - self.primary_min) > 0.2
+        mask = np.abs(self.phases - self.primary_eclipse_min_phase) > 0.2
         idx_secondary_min = np.argmin(self.fluxes[mask])
         return self.phases[mask][idx_secondary_min]
 
-    def find_eclipse(self, phase_min):
+    def get_eclipse_boundaries(self, eclipse_min_phase):
         """
         Finds the start and end phase of an eclipse based on the minimum flux.
 
         Args:
-            phase_min (float): Phase of the minimum flux.
+            eclipse_min_phase (float): Phase of the minimum flux.
 
         Returns:
             tuple: Start and end phases of the eclipse.
         """
-        idx_start, idx_end = self.find_eclipse_boundaries(phase_min)
-        return (self.phases[idx_start], self.phases[idx_end])
+        start_idx, end_idx = self._find_eclipse_boundaries(eclipse_min_phase)
+        return (self.phases[start_idx], self.phases[end_idx])
 
-    def find_eclipse_boundaries(self, phase_min):
+    def _find_eclipse_boundaries(self, eclipse_min_phase):
         """
         Determines the start and end indices of an eclipse.
 
         Args:
-            phase_min (float): Phase of the minimum flux.
+            eclipse_min_phase (float): Phase of the minimum flux.
 
         Returns:
             tuple: Indices of the start and end of the eclipse.
         """
-        idx_start = self.find_eclipse_boundary(phase_min, direction='start')
-        idx_end = self.find_eclipse_boundary(phase_min, direction='end')
-        return idx_start, idx_end
+        start_idx = self._find_eclipse_boundary(eclipse_min_phase, direction='start')
+        end_idx = self._find_eclipse_boundary(eclipse_min_phase, direction='end')
+        return start_idx, end_idx
 
-    def find_eclipse_boundary(self, phase_min, direction):
+    def _find_eclipse_boundary(self, eclipse_min_phase, direction):
         """
         Finds the boundary index of an eclipse either before (start) or after (end) the minimum flux.
 
         Args:
-            phase_min (float): Phase of the minimum flux.
+            eclipse_min_phase (float): Phase of the minimum flux.
             direction (str): Direction to search ('start' or 'end').
 
         Returns:
             int: Index of the boundary point.
         """
         if direction == 'start':
-            mask = (self.phases < phase_min)
+            mask = (self.phases < eclipse_min_phase)
         else:  # direction == 'end'
-            mask = (self.phases > phase_min)
+            mask = (self.phases > eclipse_min_phase)
 
         idx_boundary = np.where(mask & np.isclose(self.fluxes, 1.0, atol=0.01))[0]
 
         if len(idx_boundary) == 0:
+            # If no boundary found, use the closest point to 1.0 flux
             if direction == 'start':
                 return np.where(np.isclose(self.fluxes, 1.0, atol=0.01))[0][-1]
             else:
                 return np.where(np.isclose(self.fluxes, 1.0, atol=0.01))[0][0]
         else:
+            # Return the last or first index depending on direction
             return idx_boundary[-1] if direction == 'start' else idx_boundary[0]
 
     def calculate_bins(self):
@@ -127,8 +132,8 @@ class EclipsingBinaryBinner:
         Returns:
             tuple: Arrays of bin centers, bin means, bin standard deviations, bin numbers, and bin edges.
         """
-        bins_in_primary = int((self.nbins * self.frac_in_ecl) / 2)
-        bins_in_secondary = int((self.nbins * self.frac_in_ecl) - bins_in_primary)
+        bins_in_primary = int((self.nbins * self.fraction_in_eclipse) / 2)
+        bins_in_secondary = int((self.nbins * self.fraction_in_eclipse) - bins_in_primary)
 
         primary_bin_edges = self.calculate_eclipse_bins(self.primary_eclipse, bins_in_primary)
         secondary_bin_edges = self.calculate_eclipse_bins(self.secondary_eclipse, bins_in_secondary)
@@ -136,25 +141,25 @@ class EclipsingBinaryBinner:
         ooe1_bins, ooe2_bins = self.calculate_out_of_eclipse_bins(bins_in_primary, bins_in_secondary)
 
         all_bins = np.sort(np.concatenate((primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)))
-        bin_means, bin_edges, binnumber = stats.binned_statistic(self.phases, self.fluxes, statistic='mean', bins=all_bins)
+        bin_means, bin_edges, bin_number = stats.binned_statistic(self.phases, self.fluxes, statistic='mean', bins=all_bins)
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_stds, _, bin_number = stats.binned_statistic(self.phases, self.fluxes, statistic='std', bins=all_bins)
 
         return bin_centers, bin_means, bin_stds, bin_number, bin_edges
 
-    def calculate_eclipse_bins(self, eclipse, bins_in_eclipse):
+    def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
         """
         Calculates bin edges within an eclipse.
 
         Args:
-            eclipse (tuple): Start and end phases of the eclipse.
+            eclipse_boundaries (tuple): Start and end phases of the eclipse.
             bins_in_eclipse (int): Number of bins within the eclipse.
 
         Returns:
             np.ndarray: Array of bin edges within the eclipse.
         """
-        idx_start, idx_end = np.searchsorted(self.phases, eclipse)
-        eclipse_phases = np.concatenate((self.phases[idx_start:], self.phases[:idx_end + 1] + 1)) if idx_end < idx_start else self.phases[idx_start:idx_end + 1]
+        start_idx, end_idx = np.searchsorted(self.phases, eclipse_boundaries)
+        eclipse_phases = np.concatenate((self.phases[start_idx:], self.phases[:end_idx + 1] + 1)) if end_idx < start_idx else self.phases[start_idx:end_idx + 1]
         bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
         return np.array([interval.right for interval in np.unique(bins)]) % 1
 
@@ -208,8 +213,8 @@ class EclipsingBinaryBinner:
         """
         plt.figure(figsize=(20, 5))
         plt.scatter(self.phases, self.fluxes, s=3)
-        plt.scatter(self.primary_min, min(self.fluxes), c='red', s=5)
-        plt.scatter(self.secondary_min, min(self.fluxes[np.abs(self.phases - self.secondary_min) > 0.2]), c='red', s=5)
+        plt.scatter(self.primary_eclipse_min_phase, min(self.fluxes), c='red', s=5)
+        plt.scatter(self.secondary_eclipse_min_phase, min(self.fluxes[np.abs(self.phases - self.secondary_eclipse_min_phase) > 0.2]), c='red', s=5)
         plt.vlines(self.primary_eclipse, ymin=0.6, ymax=1.1, linestyle='--', color='red')
         plt.vlines(self.secondary_eclipse, ymin=0.6, ymax=1.1, linestyle='--', color='red')
         plt.ylim(0.8, 1.05)
