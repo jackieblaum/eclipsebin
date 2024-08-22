@@ -21,7 +21,7 @@ Eclipses in binary star systems contain vital information about the system's pro
 To start using the package, install it via pip:
 
 ```bash
-pip install your-package-name
+pip install eclipsebin
 ```
 
 ### Usage
