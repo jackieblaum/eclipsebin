@@ -4,7 +4,7 @@
 
 ### Overview
 
-This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike traditional uniform binning, which can dilute the crucial details of eclipses, this non-uniform binning method prioritizes the accurate representation of eclipse events.
+This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike **traditional uniform binning (middle panel)**, which can dilute the crucial details of eclipses, this **non-uniform binning method (right panel)** prioritizes the accurate representation of eclipse events.
 
 ### Key Features
 
