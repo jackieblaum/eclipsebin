@@ -146,9 +146,8 @@ class EclipsingBinaryBinner:
             if direction == "start":
                 return np.where(np.isclose(self.data['fluxes'], 1.0, atol=0.01))[0][-1]
             return np.where(np.isclose(self.data['fluxes'], 1.0, atol=0.01))[0][0]
-        else:
-            # Return the last or first index depending on direction
-            return idx_boundary[-1] if direction == "start" else idx_boundary[0]
+        # Return the last or first index depending on direction
+        return idx_boundary[-1] if direction == "start" else idx_boundary[0]
 
     def calculate_bins(self):
         """
@@ -202,7 +201,9 @@ class EclipsingBinaryBinner:
         """
         start_idx, end_idx = np.searchsorted(self.data['phases'], eclipse_boundaries)
         eclipse_phases = (
-            np.concatenate((self.data['phases'][start_idx:], self.data['phases'][: end_idx + 1] + 1))
+            np.concatenate(
+                (self.data['phases'][start_idx:], self.data['phases'][: end_idx + 1] + 1)
+            )
             if end_idx < start_idx
             else self.data['phases'][start_idx : end_idx + 1]
         )
@@ -229,8 +230,9 @@ class EclipsingBinaryBinner:
                     self.data['phases'][
                         np.searchsorted(self.data['phases'], self.secondary_eclipse[1]) :
                     ],
-                    self.data['phases'][: np.searchsorted(self.data['phases'], self.primary_eclipse[0])]
-                    + 1,
+                    self.data['phases'][
+                        : np.searchsorted(self.data['phases'], self.primary_eclipse[0])
+                    ] + 1,
                 )
             ),
             q=bins_in_ooe1,
@@ -247,8 +249,7 @@ class EclipsingBinaryBinner:
                     ],
                     self.data['phases'][
                         : np.searchsorted(self.data['phases'], self.secondary_eclipse[0])
-                    ]
-                    + 1,
+                    ] + 1,
                 )
             ),
             q=bins_in_ooe2 + 2,
@@ -327,3 +328,4 @@ class EclipsingBinaryBinner:
             self.plot_unbinned_light_curve()
 
         return bin_centers, bin_means, bin_stds
+    
