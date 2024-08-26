@@ -1,6 +1,6 @@
 ## Binning Eclipsing Binary Star Light Curves
 
-![Binned Light Curve](docs/images/binning_comparison.pdf)
+![Binned Light Curve](docs/images/binning_comparison.jpg)
 
 ### Overview
 
