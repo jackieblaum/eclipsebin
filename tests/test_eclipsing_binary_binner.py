@@ -98,7 +98,8 @@ def test_initialization_invalid_data():
 
 def test_eclipse_detection():
     '''
-    This test function verifies the eclipse detection capabilities of the EclipsingBinaryBinner class.
+    This test function verifies the eclipse detection capabilities of the 
+    EclipsingBinaryBinner class.
     It checks:
     1. The ability to correctly identify the primary eclipse minimum.
     2. The ability to determine the boundaries of the primary eclipse.
