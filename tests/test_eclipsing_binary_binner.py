@@ -26,12 +26,11 @@ def test_initialization():
         phases, fluxes, flux_errors, nbins=50, fraction_in_eclipse=0.3
     )
 
-    assert binner.nbins == 50
-    assert binner.fraction_in_eclipse == 0.3
-    assert len(binner.phases) == 100
-    assert len(binner.fluxes) == 100
-    assert len(binner.flux_errors) == 100
-
+    assert binner.params['nbins'] == 50
+    assert binner.params['fraction_in_eclipse'] == 0.3
+    assert len(binner.data['phases']) == 100
+    assert len(binner.data['fluxes']) == 100
+    assert len(binner.data['flux_errors']) == 100
 
 def test_initialization_valid_data():
     '''
@@ -53,12 +52,11 @@ def test_initialization_valid_data():
         phases, fluxes, flux_errors, nbins=50, fraction_in_eclipse=0.3
     )
 
-    assert binner.nbins == 50
-    assert binner.fraction_in_eclipse == 0.3
-    assert len(binner.phases) == 100
-    assert len(binner.fluxes) == 100
-    assert len(binner.flux_errors) == 100
-
+    assert binner.params['nbins'] == 50
+    assert binner.params['fraction_in_eclipse'] == 0.3
+    assert len(binner.data['phases']) == 100
+    assert len(binner.data['fluxes']) == 100
+    assert len(binner.data['flux_errors']) == 100
 
 def test_initialization_invalid_data():
     '''
@@ -114,7 +112,7 @@ def test_eclipse_detection():
     fluxes[45:55] = 0.9  # Simulate an eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
-    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors)
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
 
     primary_min = binner.find_minimum_flux()
     assert np.isclose(primary_min, 0.5, atol=0.05)
@@ -140,7 +138,7 @@ def test_bin_calculation():
     fluxes[45:55] = 0.9  # Simulate an eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
-    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors)
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
 
     bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=False)
 
@@ -165,7 +163,7 @@ def test_plot_functions():
     fluxes[45:55] = 0.9  # Simulate an eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
-    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors)
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
 
     # Ensure plotting functions run without error
     bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
