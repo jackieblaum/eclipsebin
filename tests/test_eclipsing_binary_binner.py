@@ -1,3 +1,7 @@
+"""
+Unit tests for the EclipsingBinaryBinner class from the eclipsebin module.
+"""
+
 import numpy as np
 import pytest
 from eclipsebin import EclipsingBinaryBinner
@@ -109,14 +113,17 @@ def test_eclipse_detection():
     '''
     phases = np.linspace(0, 1, 100)
     fluxes = np.ones_like(phases)
-    fluxes[45:55] = 0.9  # Simulate an eclipse
+    fluxes[45:55] = 0.9  # Simulate primary eclipse
+    fluxes[0:3] = 0.95 # Simulate secondary eclipse
+    fluxes[97:100] = 0.95 # Wrap secondary eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
 
+    # Ensure that find_minimum_flux returns a single value
     primary_min = binner.find_minimum_flux()
-    assert np.isclose(primary_min, 0.5, atol=0.05)
-
+    assert np.isscalar(primary_min), "find_minimum_flux should return a single value"
+    assert np.isclose(primary_min, 0.45, atol=0.05)
     primary_eclipse = binner.get_eclipse_boundaries(primary_min)
     assert primary_eclipse[0] < primary_min < primary_eclipse[1]
 
@@ -136,6 +143,8 @@ def test_bin_calculation():
     phases = np.linspace(0, 1, 100)
     fluxes = np.ones_like(phases)
     fluxes[45:55] = 0.9  # Simulate an eclipse
+    fluxes[0:3] = 0.95 # Simulate secondary eclipse
+    fluxes[97:100] = 0.95 # Wrap secondary eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
@@ -161,6 +170,8 @@ def test_plot_functions():
     phases = np.linspace(0, 1, 100)
     fluxes = np.ones_like(phases)
     fluxes[45:55] = 0.9  # Simulate an eclipse
+    fluxes[0:3] = 0.95 # Simulate secondary eclipse
+    fluxes[97:100] = 0.95 # Wrap secondary eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
 
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
