@@ -1,0 +1,12 @@
+LICENSE
+README.md
+setup.py
+eclipsebin/__init__.py
+eclipsebin/binning.py
+eclipsebin.egg-info/PKG-INFO
+eclipsebin.egg-info/SOURCES.txt
+eclipsebin.egg-info/dependency_links.txt
+eclipsebin.egg-info/requires.txt
+eclipsebin.egg-info/top_level.txt
+tests/__init__.py
+tests/test_eclipsing_binary_binner.py

@@ -24,6 +24,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pylint
+        pip install pytest pytest-cov
         pip install .
         
     - name: Lint with pylint
@@ -32,5 +33,9 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pip install pytest
-        pytest
+        pytest --cov
+
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
