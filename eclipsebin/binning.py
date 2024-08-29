@@ -216,7 +216,7 @@ class EclipsingBinaryBinner:
             else self.data["phases"][start_idx : end_idx + 1]
         )
         bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-        return np.array([interval.right for interval in np.unique(bins)])
+        return np.array([interval.right for interval in np.unique(bins)])%1
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
@@ -256,7 +256,7 @@ class EclipsingBinaryBinner:
             ]
         )
         ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
-        ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)])
+        ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)])%1
 
         # Calculate bin edges between end of primary eclipse and start of secondary eclipse
         end_idx_primary_eclipse = np.searchsorted(
@@ -278,7 +278,7 @@ class EclipsingBinaryBinner:
             ]
         )
         ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2)
-        ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)])
+        ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)])%1
 
         return ooe1_edges, ooe2_edges
 
