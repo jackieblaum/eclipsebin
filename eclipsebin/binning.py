@@ -50,8 +50,8 @@ class EclipsingBinaryBinner:
             raise ValueError(
                 "Number of data points must be greater than or equal to the number of bins."
             )
-
-        self.data = {"phases": phases, "fluxes": fluxes, "flux_errors": flux_errors}
+        sort_idx = np.argsort(phases)
+        self.data = {"phases": phases[sort_idx], "fluxes": fluxes[sort_idx], "flux_errors": flux_errors[sort_idx]}
         self.params = {"nbins": nbins, "fraction_in_eclipse": fraction_in_eclipse}
 
         # Identify primary and secondary eclipse minima

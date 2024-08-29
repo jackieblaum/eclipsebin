@@ -52,6 +52,8 @@ def test_initialization(wrapped_light_curve):
     assert len(binner.data["phases"]) == 100
     assert len(binner.data["fluxes"]) == 100
     assert len(binner.data["flux_errors"]) == 100
+    # Check if the data is sorted
+    assert np.all(np.diff(binner.data["phases"]) >= 0)
 
 
 def test_initialization_invalid_data(unwrapped_light_curve):
@@ -139,6 +141,10 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     assert len(primary_bin_right_edges) == bins_in_primary
     assert len(secondary_bin_right_edges) == bins_in_secondary
 
+    # Check if the bin edges are unique
+    assert len(np.unique(primary_bin_right_edges)) == bins_in_primary
+    assert len(np.unique(secondary_bin_right_edges)) == bins_in_secondary
+
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
     binner_unwrapped = EclipsingBinaryBinner(
@@ -169,6 +175,10 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     assert len(primary_bin_right_edges_unwrapped) == bins_in_primary_unwrapped
     assert len(secondary_bin_right_edges_unwrapped) == bins_in_secondary_unwrapped
 
+    # Check if the bin edges are unique
+    assert len(np.unique(primary_bin_right_edges_unwrapped)) == bins_in_primary_unwrapped
+    assert len(np.unique(secondary_bin_right_edges_unwrapped)) == bins_in_secondary_unwrapped
+
 
 def test_calculate_out_of_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     """
@@ -197,6 +207,10 @@ def test_calculate_out_of_eclipse_bins(wrapped_light_curve, unwrapped_light_curv
     assert len(ooe1_right_edges) == bins_in_ooe1
     assert len(ooe2_right_edges) == bins_in_ooe2
 
+    # Check if the bin edges are unique
+    assert len(np.unique(ooe1_right_edges)) == bins_in_ooe1
+    assert len(np.unique(ooe2_right_edges)) == bins_in_ooe2
+
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
@@ -219,6 +233,10 @@ def test_calculate_out_of_eclipse_bins(wrapped_light_curve, unwrapped_light_curv
     )
     assert len(ooe1_right_edges) == bins_in_ooe1
     assert len(ooe2_right_edges) == bins_in_ooe2
+
+    # Check if the bin edges are unique
+    assert len(np.unique(ooe1_right_edges)) == bins_in_ooe1
+    assert len(np.unique(ooe2_right_edges)) == bins_in_ooe2
 
 
 def test_find_bin_edges(wrapped_light_curve, unwrapped_light_curve):
