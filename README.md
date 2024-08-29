@@ -26,9 +26,13 @@ Eclipses in binary star systems contain vital information about the system's pro
 
 ### How it Works
 - **Eclipse Detection**: The package first identifies the primary and secondary eclipse phases. The primary eclipse is located by finding the minimum flux, and the secondary eclipse is located by finding the minimum flux at least 0.2 phase units away from the primary eclipse. 
+
 - **Eclipse Boundaries**: The package defines the boundaries of the eclipses as the points where the flux returns to 1.0 flux units, or the closest point to 1.0 flux units if the flux does not return to 1.0.
+
 - **Bin Groups**: The package then groups the data into four segments: the two eclipse regions and the two out-of-eclipse regions. A specified fraction of the total number of bins is split between the eclipse regions, and the remaining bins are split evenly between the out-of-eclipse regions.
+
 - **Binning**: The package then uses the `pandas qcut` function within each group to bin the data into a specified number of bins. This function bins the data such that there are an approximately equal number of points within each bin for the given group.
+
 - **Plotting**: The package also provides a function to plot the binned and unbinned light curves, marking the eclipse boundaries with vertical lines.
 
 ### Getting Started
