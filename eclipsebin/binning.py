@@ -360,6 +360,7 @@ class EclipsingBinaryBinner:
             label="Secondary Eclipse",
         )
         plt.ylim(ylims)
+        plt.xlim(0, 1)
         plt.legend()
         plt.show()
 
