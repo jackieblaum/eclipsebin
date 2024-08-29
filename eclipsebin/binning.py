@@ -293,17 +293,20 @@ class EclipsingBinaryBinner:
             bin_edges (np.ndarray): Array of bin edges.
         """
         plt.figure(figsize=(20, 5))
-        plt.errorbar(bin_centers, bin_means, yerr=bin_stds, fmt=".", color="red")
-        plt.scatter(self.data["phases"], self.data["fluxes"], s=20)
+        plt.title("Binned Light Curve")
+        plt.errorbar(bin_centers, bin_means, yerr = bin_stds, linestyle = "none", marker='.')
+        plt.xlabel("Phases", fontsize = 10)
+        plt.ylabel("Magnitude", fontsize = 10)
+        plt.xlim(0,1)
+        ylims = plt.ylim()
         plt.vlines(
-            self.primary_eclipse, ymin=0.6, ymax=1.1, linestyle="--", color="red"
+            self.primary_eclipse, ymin=ylims[0], ymax=ylims[1], linestyle="--", color="red", label = "Primary Eclipse"
         )
         plt.vlines(
-            self.secondary_eclipse, ymin=0.6, ymax=1.1, linestyle="--", color="red"
+            self.secondary_eclipse, ymin=ylims[0], ymax=ylims[1], linestyle="--", color="blue", label = "Secondary Eclipse"
         )
-        plt.vlines(bin_edges, ymin=0.6, ymax=1.1, linestyle="--", color="green")
-        plt.ylim(0.8, 1.05)
-        plt.xlim(0.97, 1.001)
+        plt.ylim(ylims)
+        plt.legend()
         plt.show()
 
     def plot_unbinned_light_curve(self):
@@ -311,27 +314,17 @@ class EclipsingBinaryBinner:
         Plots the unbinned light curve with the calculated eclipse minima and bin edges.
         """
         plt.figure(figsize=(20, 5))
+        plt.title("Unbinned Light Curve")
         plt.scatter(self.data["phases"], self.data["fluxes"], s=3)
-        plt.scatter(
-            self.primary_eclipse_min_phase, min(self.data["fluxes"]), c="red", s=5
-        )
-        plt.scatter(
-            self.secondary_eclipse_min_phase,
-            min(
-                self.data["fluxes"][
-                    np.abs(self.data["phases"] - self.secondary_eclipse_min_phase) > 0.2
-                ]
-            ),
-            c="red",
-            s=5,
+        ylims = plt.ylim()
+        plt.vlines(
+            self.primary_eclipse, ymin=ylims[0], ymax=ylims[1], linestyle="--", color="red", label = "Primary Eclipse"
         )
         plt.vlines(
-            self.primary_eclipse, ymin=0.6, ymax=1.1, linestyle="--", color="red"
+            self.secondary_eclipse, ymin=ylims[0], ymax=ylims[1], linestyle="--", color="blue", label = "Secondary Eclipse"
         )
-        plt.vlines(
-            self.secondary_eclipse, ymin=0.6, ymax=1.1, linestyle="--", color="red"
-        )
-        plt.ylim(0.8, 1.05)
+        plt.ylim(ylims)
+        plt.legend()
         plt.show()
 
     def bin_light_curve(self, plot=True):
@@ -348,7 +341,7 @@ class EclipsingBinaryBinner:
         bin_centers, bin_means, bin_stds, _, bin_edges = self.calculate_bins()
 
         if plot:
-            self.plot_binned_light_curve(bin_centers, bin_means, bin_stds, bin_edges)
             self.plot_unbinned_light_curve()
+            self.plot_binned_light_curve(bin_centers, bin_means, bin_stds, bin_edges)
 
         return bin_centers, bin_means, bin_stds
