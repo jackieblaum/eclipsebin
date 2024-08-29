@@ -374,10 +374,10 @@ class EclipsingBinaryBinner:
         Returns:
             tuple: Arrays of bin centers, bin means, and bin standard deviations.
         """
-        bin_centers, bin_means, bin_stds, _, _ = self.calculate_bins()
+        bin_centers, bin_means, bin_errors, _, _ = self.calculate_bins()
 
         if plot:
             self.plot_unbinned_light_curve()
-            self.plot_binned_light_curve(bin_centers, bin_means, bin_stds)
+            self.plot_binned_light_curve(bin_centers, bin_means, bin_errors)
 
-        return bin_centers, bin_means, bin_stds
+        return bin_centers, bin_means, bin_errors
