@@ -300,19 +300,30 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     # Test wrapped light curve
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=False)
+    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
-    assert len(bin_stds) == len(bin_centers)
+    assert len(bin_errors) == len(bin_centers)
+    assert np.all(bin_errors >= 0)
+    assert not np.any(np.isnan(bin_centers))
+    assert not np.any(np.isnan(bin_means))
+    assert not np.any(np.isnan(bin_errors))
+    assert np.all(bin_centers <= 1) and np.all(bin_centers >= 0)
+    assert len(np.unique(bin_centers)) == len(bin_centers)
 
     # Test unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=False)
+    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
-    assert len(bin_stds) == len(bin_centers)
-
+    assert len(bin_errors) == len(bin_centers)
+    assert np.all(bin_errors >= 0)
+    assert not np.any(np.isnan(bin_centers))
+    assert not np.any(np.isnan(bin_means))
+    assert not np.any(np.isnan(bin_errors))
+    assert np.all(bin_centers <= 1) and np.all(bin_centers >= 0)
+    assert len(np.unique(bin_centers)) == len(bin_centers)
 
 def test_plot_functions(wrapped_light_curve):
     """
@@ -320,6 +331,6 @@ def test_plot_functions(wrapped_light_curve):
     """
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
-    binner.plot_binned_light_curve(bin_centers, bin_means, bin_stds)
+    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=True)
+    binner.plot_binned_light_curve(bin_centers, bin_means, bin_errors)
     binner.plot_unbinned_light_curve()
