@@ -341,7 +341,8 @@ class EclipsingBinaryBinner:
         """
         plt.figure(figsize=(20, 5))
         plt.title("Unbinned Light Curve")
-        plt.scatter(self.data["phases"], self.data["fluxes"], s=3)
+        plt.errorbar(self.data["phases"], self.data["fluxes"],
+                     yerr=self.data["flux_errors"], linestyle="none", marker=".")
         ylims = plt.ylim()
         plt.vlines(
             self.primary_eclipse,
