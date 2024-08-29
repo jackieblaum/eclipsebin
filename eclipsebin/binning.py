@@ -311,8 +311,8 @@ class EclipsingBinaryBinner:
         plt.errorbar(
             bin_centers, bin_means, yerr=bin_stds, linestyle="none", marker="."
         )
-        plt.xlabel("Phases", fontsize=10)
-        plt.ylabel("Magnitude", fontsize=10)
+        plt.xlabel("Phases", fontsize=14)
+        plt.ylabel("Normalized Flux", fontsize=14)
         plt.xlim(0, 1)
         ylims = plt.ylim()
         plt.vlines(
@@ -361,6 +361,8 @@ class EclipsingBinaryBinner:
         )
         plt.ylim(ylims)
         plt.xlim(0, 1)
+        plt.ylabel("Normalized Flux", fontsize=14)
+        plt.xlabel("Phases", fontsize=14)
         plt.legend()
         plt.show()
 
