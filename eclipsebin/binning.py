@@ -191,11 +191,21 @@ class EclipsingBinaryBinner:
             self.data["phases"], self.data["fluxes"], statistic="mean", bins=all_bins
         )
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
-        bin_stds, _, bin_number = stats.binned_statistic(
-            self.data["phases"], self.data["fluxes"], statistic="std", bins=all_bins
-        )
+        bin_errors = np.zeros(len(bin_means))
+        # Calculate the propagated errors for each bin
+        for i in range(len(all_bins) - 1):
+            # Get the indices of the data points in this bin
+            bin_mask = (self.data["phases"] >= all_bins[i]) & (
+                self.data["phases"] < all_bins[i + 1]
+            )
+            # Get the errors for these data points
+            flux_errors_in_bin = self.data["flux_errors"][bin_mask]
+            # Calculate the propagated error for the bin
+            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / len(
+                flux_errors_in_bin
+            )
 
-        return bin_centers, bin_means, bin_stds, bin_number, bin_edges
+        return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
     def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
         """
