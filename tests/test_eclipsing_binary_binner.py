@@ -97,9 +97,7 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
     assert primary_eclipse[0] < primary_min < primary_eclipse[1]
 
     # Test unwrapped light curve
-    phases_unwrapped, fluxes_unwrapped, flux_errors_unwrapped = (
-        unwrapped_light_curve
-    )
+    phases_unwrapped, fluxes_unwrapped, flux_errors_unwrapped = unwrapped_light_curve
     binner_unwrapped = EclipsingBinaryBinner(
         phases_unwrapped, fluxes_unwrapped, flux_errors_unwrapped, nbins=50
     )
@@ -147,13 +145,13 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
 
     # Check if the bin edges are within the range [0, 1)
     assert np.all(primary_bin_right_edges <= 1) and np.all(primary_bin_right_edges >= 0)
-    assert np.all(secondary_bin_right_edges <= 1) and np.all(secondary_bin_right_edges >= 0)
+    assert np.all(secondary_bin_right_edges <= 1) and np.all(
+        secondary_bin_right_edges >= 0
+    )
 
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
-    binner_unwrapped = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors, nbins=50
-    )
+    binner_unwrapped = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
     bins_in_primary_unwrapped = int(
         (
             binner_unwrapped.params["nbins"]
@@ -180,12 +178,21 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     assert len(secondary_bin_right_edges_unwrapped) == bins_in_secondary_unwrapped
 
     # Check if the bin edges are unique
-    assert len(np.unique(primary_bin_right_edges_unwrapped)) == bins_in_primary_unwrapped
-    assert len(np.unique(secondary_bin_right_edges_unwrapped)) == bins_in_secondary_unwrapped
+    assert (
+        len(np.unique(primary_bin_right_edges_unwrapped)) == bins_in_primary_unwrapped
+    )
+    assert (
+        len(np.unique(secondary_bin_right_edges_unwrapped))
+        == bins_in_secondary_unwrapped
+    )
 
     # Check if the bin edges are within the range [0, 1)
-    assert np.all(primary_bin_right_edges_unwrapped <= 1) and np.all(primary_bin_right_edges_unwrapped >= 0)
-    assert np.all(secondary_bin_right_edges_unwrapped <= 1) and np.all(secondary_bin_right_edges_unwrapped >= 0)
+    assert np.all(primary_bin_right_edges_unwrapped <= 1) and np.all(
+        primary_bin_right_edges_unwrapped >= 0
+    )
+    assert np.all(secondary_bin_right_edges_unwrapped <= 1) and np.all(
+        secondary_bin_right_edges_unwrapped >= 0
+    )
 
 
 def test_calculate_out_of_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
@@ -314,5 +321,5 @@ def test_plot_functions(wrapped_light_curve):
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
     bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
-    binner.plot_binned_light_curve(bin_centers, bin_means, bin_stds, bin_centers)
+    binner.plot_binned_light_curve(bin_centers, bin_means, bin_stds)
     binner.plot_unbinned_light_curve()
