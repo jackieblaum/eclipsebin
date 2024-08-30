@@ -62,3 +62,9 @@ Contributions are welcome! Please refer to the [Contributing Guide](CONTRIBUTING
 ### License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Acknowledgments
+
+![NSF](docs/images/nsf.png)
+
+This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 2206744 & DGE 2146752. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
