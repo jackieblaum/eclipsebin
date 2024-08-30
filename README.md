@@ -3,8 +3,8 @@
 ![Build Status](https://github.com/jackieblaum/eclipsebin/actions/workflows/tests.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Python Versions](https://img.shields.io/pypi/pyversions/eclipsebin)
-![PyPI Version](https://img.shields.io/pypi/v/eclipsebin)
-![Coverage](https://codecov.io/gh/jackieblaum/eclipsebin/branch/main/graph/badge.svg)
+[![PyPI Version](https://img.shields.io/pypi/v/eclipsebin)](https://pypi.org/project/eclipsebin/)
+[![Coverage](https://codecov.io/gh/jackieblaum/eclipsebin/branch/main/graph/badge.svg)](https://codecov.io/gh/jackieblaum/eclipsebin)
 
 ![Binned Light Curve](docs/images/binning_comparison.jpg)
 
