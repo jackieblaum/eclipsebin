@@ -8,7 +8,7 @@ setup(
     name="eclipsebin",
     version="0.1.4",
     author="Jackie Blaum",
-    author_email="jackie.blaum@example.com",
+    author_email="jackie.blaum@gmail.com",
     description="A specialized binning scheme for eclipsing binary star light curves",
     long_description=long_description,
     long_description_content_type="text/markdown",
