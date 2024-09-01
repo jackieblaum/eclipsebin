@@ -277,6 +277,8 @@ def test_find_bin_edges(wrapped_light_curve, unwrapped_light_curve):
     assert len(all_bins) == expected_bins_count
     # Check that all bin edges are different
     assert len(np.unique(all_bins)) == len(all_bins)
+    # Check that the last bin edge is 1
+    assert np.isclose(all_bins[-1], 1)
 
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
@@ -291,6 +293,8 @@ def test_find_bin_edges(wrapped_light_curve, unwrapped_light_curve):
     assert len(np.unique(all_bins)) == len(all_bins)
     # Check if the bin edges are within the range [0, 1)
     assert np.all(all_bins <= 1) and np.all(all_bins >= 0)
+    # Check that the last bin edge is 1
+    assert np.isclose(all_bins[-1], 1)
 
 
 def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
@@ -300,7 +304,7 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     # Test wrapped light curve
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
+    bin_centers, bin_means, bin_errors, bin_numbers, _ = binner.calculate_bins()
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
     assert len(bin_errors) == len(bin_centers)
@@ -310,11 +314,12 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     assert not np.any(np.isnan(bin_errors))
     assert np.all(bin_centers <= 1) and np.all(bin_centers >= 0)
     assert len(np.unique(bin_centers)) == len(bin_centers)
+    assert np.all(np.bincount(bin_numbers) > 0)
 
     # Test unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
+    bin_centers, bin_means, bin_errors, bin_numbers, _ = binner.calculate_bins()
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
     assert len(bin_errors) == len(bin_centers)
@@ -324,6 +329,8 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     assert not np.any(np.isnan(bin_errors))
     assert np.all(bin_centers <= 1) and np.all(bin_centers >= 0)
     assert len(np.unique(bin_centers)) == len(bin_centers)
+    assert np.all(np.bincount(bin_numbers) > 0)
+
 
 def test_plot_functions(wrapped_light_curve):
     """
