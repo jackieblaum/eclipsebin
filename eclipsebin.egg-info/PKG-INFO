@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: eclipsebin
-Version: 0.1.0
+Version: 0.1.4
 Summary: A specialized binning scheme for eclipsing binary star light curves
 Home-page: https://github.com/jackieblaum/eclipsebin
 Author: Jackie Blaum
@@ -38,6 +38,17 @@ This Python package provides a specialized binning scheme designed to more effec
 
 Eclipses in binary star systems contain vital information about the system's properties, such as the relative sizes, masses, and orbital parameters of the stars. Standard uniform binning can obscure these details, especially when the eclipse duration is short relative to the orbital period. This package mitigates that issue by adaptively placing more bins where they matter most—during the eclipses—thereby preserving the fidelity of the light curve and improving the subsequent analysis.
 
+### How it Works
+- **Eclipse Detection**: The package first identifies the primary and secondary eclipse phases. The primary eclipse is located by finding the minimum flux, and the secondary eclipse is located by finding the minimum flux at least 0.2 phase units away from the primary eclipse. 
+
+- **Eclipse Boundaries**: The package defines the boundaries of the eclipses as the points where the flux returns to 1.0 flux units, or the closest point to 1.0 flux units if the flux does not return to 1.0.
+
+- **Bin Groups**: The package then groups the data into four segments: the two eclipse regions and the two out-of-eclipse regions. A specified fraction of the total number of bins is split between the eclipse regions, and the remaining bins are split evenly between the out-of-eclipse regions.
+
+- **Binning**: The package then uses the `pandas qcut` function within each group to bin the data into a specified number of bins. This function bins the data such that there are an approximately equal number of points within each bin for the given group.
+
+- **Plotting**: The package also provides a function to plot the binned and unbinned light curves, marking the eclipse boundaries with vertical lines.
+
 ### Getting Started
 
 To start using the package, install it via pip:
@@ -52,11 +63,11 @@ pip install eclipsebin
 import eclipsebin as ebin
 
 # Example usage
-binner = EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, frac_in_ecl=0.2)
+binner = EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, fraction_in_eclipse=0.2)
 bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
 ```
 
-Refer to the [documentation](https://github.com/yourusername/your-package-name) for more detailed usage instructions and examples.
+Refer to the [documentation](https://github.com/jackieblaum/eclipsebin/blob/main/docs/usage.md) for more detailed usage instructions and examples.
 
 ### Contributing
 

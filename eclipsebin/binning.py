@@ -176,7 +176,12 @@ class EclipsingBinaryBinner:
                 (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
             )
         )
-        return all_bins
+        # Now adjust the phases and bins so that the bin edges start and end at 0 and 1
+        rightmost_edge = all_bins[-1]
+        shifted_bins = all_bins + (1 - rightmost_edge)
+        # Also shift the phases to match
+        self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
+        return shifted_bins
 
     def calculate_bins(self):
         """
@@ -188,15 +193,18 @@ class EclipsingBinaryBinner:
         """
         all_bins = self.find_bin_edges()
         bin_means, bin_edges, bin_number = stats.binned_statistic(
-            self.data["phases"], self.data["fluxes"], statistic="mean", bins=all_bins
+            self.data["shifted_phases"],
+            self.data["fluxes"],
+            statistic="mean",
+            bins=all_bins,
         )
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_errors = np.zeros(len(bin_means))
         # Calculate the propagated errors for each bin
         for i in range(len(all_bins) - 1):
             # Get the indices of the data points in this bin
-            bin_mask = (self.data["phases"] >= all_bins[i]) & (
-                self.data["phases"] < all_bins[i + 1]
+            bin_mask = (self.data["shifted_phases"] >= all_bins[i]) & (
+                self.data["shifted_phases"] < all_bins[i + 1]
             )
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
@@ -270,7 +278,7 @@ class EclipsingBinaryBinner:
             ]
         )
         ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
-        ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
+        ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)])
 
         # Calculate bin edges between end of primary eclipse and start of secondary eclipse
         end_idx_primary_eclipse = np.searchsorted(
@@ -341,8 +349,13 @@ class EclipsingBinaryBinner:
         """
         plt.figure(figsize=(20, 5))
         plt.title("Unbinned Light Curve")
-        plt.errorbar(self.data["phases"], self.data["fluxes"],
-                     yerr=self.data["flux_errors"], linestyle="none", marker=".")
+        plt.errorbar(
+            self.data["shifted_phases"],
+            self.data["fluxes"],
+            yerr=self.data["flux_errors"],
+            linestyle="none",
+            marker=".",
+        )
         ylims = plt.ylim()
         plt.vlines(
             self.primary_eclipse,
