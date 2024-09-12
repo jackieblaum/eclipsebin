@@ -189,10 +189,36 @@ class EclipsingBinaryBinner:
         bins_in_primary = int(
             (self.params["nbins"] * self.params["fraction_in_eclipse"]) / 2
         )
+        if self.primary_eclipse[0] < self.primary_eclipse[1]:
+            primary_eclipse_data_points = np.sum(
+                (self.data["phases"] >= self.primary_eclipse[0])
+                & (self.data["phases"] <= self.primary_eclipse[1])
+            )
+        else:
+            primary_eclipse_data_points = np.sum(
+                (self.data["phases"] <= self.primary_eclipse[0])
+                | (self.data["phases"] >= self.primary_eclipse[1])
+            )
+        if primary_eclipse_data_points < bins_in_primary:
+            bins_in_primary = primary_eclipse_data_points
+
         bins_in_secondary = int(
             (self.params["nbins"] * self.params["fraction_in_eclipse"])
             - bins_in_primary
         )
+        if self.secondary_eclipse[0] < self.secondary_eclipse[1]:
+            secondary_eclipse_data_points = np.sum(
+                (self.data["phases"] >= self.secondary_eclipse[0])
+                & (self.data["phases"] <= self.secondary_eclipse[1])
+            )
+        else:
+            secondary_eclipse_data_points = np.sum(
+                (self.data["phases"] <= self.secondary_eclipse[0])
+                | (self.data["phases"] >= self.secondary_eclipse[1])
+            )
+        if secondary_eclipse_data_points < bins_in_secondary:
+            bins_in_secondary = secondary_eclipse_data_points
+        print(bins_in_secondary)
 
         primary_bin_edges = self.calculate_eclipse_bins(
             self.primary_eclipse, bins_in_primary
@@ -211,7 +237,7 @@ class EclipsingBinaryBinner:
             )
         )
         return all_bins
-    
+
     def shift_bin_edges(self, bins):
         """
         Shift the bins so that the rightmost bin edge is set to be 1.
