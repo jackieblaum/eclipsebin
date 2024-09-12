@@ -74,7 +74,7 @@ class EclipsingBinaryBinner:
             float: Phase value of the primary eclipse minimum.
         """
         if use_shifted_phases:
-            if "shifted_phases" in self.data.keys():
+            if "shifted_phases" in self.data:  # Changed to iterate directly
                 phases = self.data["shifted_phases"]
             else:
                 print("Must shift phases first.")
