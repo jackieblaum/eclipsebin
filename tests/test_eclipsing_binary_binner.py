@@ -186,23 +186,15 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
 
     # Test unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
-    binner = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors, nbins=50
-    )
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
     primary_min = binner.find_minimum_flux()
     assert np.isclose(primary_min, 0.7, atol=0.01)
     primary_eclipse = binner.get_eclipse_boundaries(primary=True)
-    assert (
-        primary_eclipse[0]
-        < primary_min
-        < primary_eclipse[1]
-    )
+    assert primary_eclipse[0] < primary_min < primary_eclipse[1]
 
     secondary_min = binner.find_secondary_minimum()
     secondary_eclipse = binner.get_eclipse_boundaries(primary=False)
-    assert (
-        secondary_eclipse[0] < secondary_min < secondary_eclipse[1]
-    )
+    assert secondary_eclipse[0] < secondary_min < secondary_eclipse[1]
 
     # Test for shifted phases
     bins = binner.find_bin_edges()
@@ -217,9 +209,7 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
     secondary_eclipse = binner.get_eclipse_boundaries(
         primary=False, use_shifted_phases=True
     )
-    assert (
-        secondary_eclipse[0] < secondary_min < secondary_eclipse[1]
-    )
+    assert secondary_eclipse[0] < secondary_min < secondary_eclipse[1]
 
 
 def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
