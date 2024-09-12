@@ -140,6 +140,24 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
     assert np.isclose(primary_min, 0.45, atol=0.05)
     primary_eclipse = binner.get_eclipse_boundaries(primary=True)
     assert primary_eclipse[0] < primary_min < primary_eclipse[1]
+    assert np.isclose(primary_eclipse[0], 0.45, atol=0.01)
+    assert np.isclose(primary_eclipse[1], 0.55, atol=0.01)
+
+    secondary_min = binner.find_secondary_minimum()
+    secondary_eclipse = binner.get_eclipse_boundaries(primary=False)
+    assert np.isclose(secondary_eclipse[0], 0.97, atol=0.01)
+    assert np.isclose(secondary_eclipse[1], 0.03, atol=0.01)
+
+    # Test for shifted phases
+    bins = binner.find_bin_edges()
+    _ = binner.shift_bin_edges(bins)
+    primary_min = binner.find_minimum_flux(use_shifted_phases=True)
+    primary_eclipse = binner.get_eclipse_boundaries(primary=True, use_shifted_phases=True)
+    assert primary_eclipse[0] < primary_min < primary_eclipse[1]
+
+    secondary_min = binner.find_secondary_minimum(use_shifted_phases=True)
+    secondary_eclipse = binner.get_eclipse_boundaries(primary=False, use_shifted_phases=True)
+    assert 0 <= secondary_eclipse[0] <= 1 and 0 <= secondary_eclipse[1] <= 1
 
     # Test unwrapped light curve
     phases_unwrapped, fluxes_unwrapped, flux_errors_unwrapped = unwrapped_light_curve
@@ -156,6 +174,21 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
         < primary_min_unwrapped
         < primary_eclipse_unwrapped[1]
     )
+
+    secondary_min = binner_unwrapped.find_secondary_minimum()
+    secondary_eclipse_unwrapped = binner_unwrapped.get_eclipse_boundaries(primary=False)
+    assert secondary_eclipse_unwrapped[0] < secondary_min < secondary_eclipse_unwrapped[1]
+
+    # Test for shifted phases
+    bins = binner_unwrapped.find_bin_edges()
+    _ = binner_unwrapped.shift_bin_edges(bins)
+    primary_min = binner.find_minimum_flux(use_shifted_phases=True)
+    primary_eclipse_unwrapped = binner.get_eclipse_boundaries(primary=True, use_shifted_phases=True)
+    assert primary_eclipse_unwrapped[0] < primary_min < primary_eclipse_unwrapped[1]
+
+    secondary_min = binner_unwrapped.find_secondary_minimum(use_shifted_phases=True)
+    secondary_eclipse_unwrapped = binner_unwrapped.get_eclipse_boundaries(primary=False, use_shifted_phases=True)
+    assert secondary_eclipse_unwrapped[0] < secondary_min < secondary_eclipse_unwrapped[1]
 
 
 def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
