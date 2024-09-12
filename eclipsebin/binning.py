@@ -173,14 +173,19 @@ class EclipsingBinaryBinner:
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=0.01))[
             0
         ]
-
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
             if direction == "start":
                 return np.where(np.isclose(self.data["fluxes"], 1.0, atol=0.01))[0][-1]
             return np.where(np.isclose(self.data["fluxes"], 1.0, atol=0.01))[0][0]
         # Return the last or first index depending on direction
-        return idx_boundary[-1] if direction == "start" else idx_boundary[0]
+        boundary_phase = (
+            max(phases[idx_boundary])
+            if direction == "start"
+            else min(phases[idx_boundary])
+        )
+        boundary_index = np.where(np.isclose(phases, boundary_phase, atol=0.0001))[0][0]
+        return boundary_index
 
     def find_bin_edges(self):
         """
@@ -218,7 +223,6 @@ class EclipsingBinaryBinner:
             )
         if secondary_eclipse_data_points < bins_in_secondary:
             bins_in_secondary = secondary_eclipse_data_points
-        print(bins_in_secondary)
 
         primary_bin_edges = self.calculate_eclipse_bins(
             self.primary_eclipse, bins_in_primary
