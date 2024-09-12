@@ -17,12 +17,19 @@ def wrapped_light_curve():
     """
     Fixture to set up a wrapped eclipsing binary light curve.
     """
-    phases = np.linspace(0, 1, 100)
+    np.random.seed(1)
+    phases = np.linspace(0, 0.999, 100)
     fluxes = np.ones_like(phases)
-    fluxes[45:55] = 0.9  # Simulate primary eclipse
-    fluxes[0:3] = 0.95  # Simulate secondary eclipse
-    fluxes[97:100] = 0.95  # Wrap secondary eclipse
+    # Simulate primary eclipse
+    fluxes[45:55] = [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.75, 0.8, 0.85, 0.9]
+    fluxes[0:3] = [0.9, 0.93, 0.95]  # Simulate secondary eclipse
+    fluxes[97:100] = [0.94, 0.93, 0.91]  # Wrap secondary eclipse
     flux_errors = np.random.normal(0.01, 0.001, 100)
+    # Select a random, unevenly spaced subset of the data
+    random_indices = np.random.choice(range(len(phases)), size=80, replace=False)
+    phases = phases[random_indices]
+    fluxes = fluxes[random_indices]
+    flux_errors = flux_errors[random_indices]
     return phases, fluxes, flux_errors
 
 
@@ -31,11 +38,18 @@ def unwrapped_light_curve():
     """
     Fixture to set up an unwrapped eclipsing binary light curve.
     """
-    phases = np.linspace(0, 1, 100)
+    phases = np.linspace(0, 0.999, 100)
     fluxes = np.ones_like(phases)
-    fluxes[65:75] = 0.9  # Simulate primary eclipse
-    fluxes[20:30] = 0.95  # Simulate secondary eclipse
+    # Simulate primary eclipse
+    fluxes[65:75] = [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.75, 0.8, 0.85, 0.9]
+    # Simulate secondary eclipse
+    fluxes[20:30] =[0.95, 0.94, 0.93, 0.92, 0.91, 0.9, 0.92, 0.93, 0.94, 0.95]
     flux_errors = np.random.normal(0.01, 0.001, 100)
+    # Select a random, unevenly spaced subset of the data
+    random_indices = np.random.choice(range(len(phases)), size=80, replace=False)
+    phases = phases[random_indices]
+    fluxes = fluxes[random_indices]
+    flux_errors = flux_errors[random_indices]
     return phases, fluxes, flux_errors
 
 
@@ -49,9 +63,9 @@ def test_initialization(wrapped_light_curve):
     )
     assert binner.params["nbins"] == 50
     assert binner.params["fraction_in_eclipse"] == 0.3
-    assert len(binner.data["phases"]) == 100
-    assert len(binner.data["fluxes"]) == 100
-    assert len(binner.data["flux_errors"]) == 100
+    assert len(binner.data["phases"]) == 80
+    assert len(binner.data["fluxes"]) == 80
+    assert len(binner.data["flux_errors"]) == 80
     # Check if the data is sorted
     assert np.all(np.diff(binner.data["phases"]) >= 0)
 
@@ -137,16 +151,16 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
     primary_min = binner.find_minimum_flux()
-    assert np.isclose(primary_min, 0.45, atol=0.05)
+    assert np.isclose(primary_min, 0.5, atol=0.05)
     primary_eclipse = binner.get_eclipse_boundaries(primary=True)
     assert primary_eclipse[0] < primary_min < primary_eclipse[1]
-    assert np.isclose(primary_eclipse[0], 0.45, atol=0.01)
-    assert np.isclose(primary_eclipse[1], 0.55, atol=0.01)
+    assert np.isclose(primary_eclipse[0], 0.44, atol=0.01)
+    assert np.isclose(primary_eclipse[1], 0.56, atol=0.01)
 
     secondary_min = binner.find_secondary_minimum()
     secondary_eclipse = binner.get_eclipse_boundaries(primary=False)
-    assert np.isclose(secondary_eclipse[0], 0.97, atol=0.01)
-    assert np.isclose(secondary_eclipse[1], 0.03, atol=0.01)
+    assert np.isclose(secondary_eclipse[0], 0.96, atol=0.01)
+    assert np.isclose(secondary_eclipse[1], 0.04, atol=0.01)
 
     # Test for shifted phases
     bins = binner.find_bin_edges()
@@ -165,7 +179,7 @@ def test_eclipse_detection(wrapped_light_curve, unwrapped_light_curve):
         phases_unwrapped, fluxes_unwrapped, flux_errors_unwrapped, nbins=50
     )
     primary_min_unwrapped = binner_unwrapped.find_minimum_flux()
-    assert np.isclose(primary_min_unwrapped, 0.65, atol=0.05)
+    assert np.isclose(primary_min_unwrapped, 0.7, atol=0.01)
     primary_eclipse_unwrapped = binner_unwrapped.get_eclipse_boundaries(
         primary=True
     )
