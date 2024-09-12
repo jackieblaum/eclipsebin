@@ -355,6 +355,8 @@ def test_find_bin_edges(wrapped_light_curve, unwrapped_light_curve):
     assert len(all_bins) == expected_bins_count
     # Check that all bin edges are different
     assert len(np.unique(all_bins)) == len(all_bins)
+    # Check if the bin edges are within the range [0, 1)
+    assert np.all(all_bins <= 1) and np.all(all_bins >= 0)
 
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
