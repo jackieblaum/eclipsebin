@@ -74,7 +74,11 @@ class EclipsingBinaryBinner:
             float: Phase value of the primary eclipse minimum.
         """
         if use_shifted_phases:
-            phases = self.data["shifted_phases"]
+            if "shifted_phases" in self.data.keys():
+                phases = self.data["shifted_phases"]
+            else:
+                print("Must shift phases first.")
+                return -1
         else:
             phases = self.data["phases"]
         idx_min = np.argmin(self.data["fluxes"])
@@ -206,10 +210,14 @@ class EclipsingBinaryBinner:
                 (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
             )
         )
-        # Now adjust the phases and bins so that the bin edges start and end at 0 and 1
-        rightmost_edge = all_bins[-1]
-        shifted_bins = all_bins + (1 - rightmost_edge)
-        # Also shift the phases to match
+        return all_bins
+    
+    def shift_bin_edges(self, bins):
+        """
+        Shift the bins so that the rightmost bin edge is set to be 1.
+        """
+        rightmost_edge = bins[-1]
+        shifted_bins = bins + (1 - rightmost_edge)
         self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
         return shifted_bins
 
@@ -222,19 +230,20 @@ class EclipsingBinaryBinner:
                 and bin edges.
         """
         all_bins = self.find_bin_edges()
+        shifted_bins = self.shift_bin_edges(all_bins)
         bin_means, bin_edges, bin_number = stats.binned_statistic(
             self.data["shifted_phases"],
             self.data["fluxes"],
             statistic="mean",
-            bins=all_bins,
+            bins=shifted_bins,
         )
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_errors = np.zeros(len(bin_means))
         # Calculate the propagated errors for each bin
-        for i in range(len(all_bins) - 1):
+        for i in range(len(shifted_bins) - 1):
             # Get the indices of the data points in this bin
-            bin_mask = (self.data["shifted_phases"] >= all_bins[i]) & (
-                self.data["shifted_phases"] < all_bins[i + 1]
+            bin_mask = (self.data["shifted_phases"] >= shifted_bins[i]) & (
+                self.data["shifted_phases"] < shifted_bins[i + 1]
             )
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
