@@ -204,8 +204,7 @@ class EclipsingBinaryBinner:
                 (self.data["phases"] <= self.primary_eclipse[0])
                 | (self.data["phases"] >= self.primary_eclipse[1])
             )
-        if primary_eclipse_data_points < bins_in_primary:
-            bins_in_primary = primary_eclipse_data_points
+        bins_in_primary = min(bins_in_primary, primary_eclipse_data_points)
 
         bins_in_secondary = int(
             (self.params["nbins"] * self.params["fraction_in_eclipse"])
@@ -221,8 +220,7 @@ class EclipsingBinaryBinner:
                 (self.data["phases"] <= self.secondary_eclipse[0])
                 | (self.data["phases"] >= self.secondary_eclipse[1])
             )
-        if secondary_eclipse_data_points < bins_in_secondary:
-            bins_in_secondary = secondary_eclipse_data_points
+        bins_in_secondary = min(bins_in_secondary, secondary_eclipse_data_points)
 
         primary_bin_edges = self.calculate_eclipse_bins(
             self.primary_eclipse, bins_in_primary
