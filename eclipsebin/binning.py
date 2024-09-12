@@ -278,9 +278,7 @@ class EclipsingBinaryBinner:
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
             # Calculate the propagated error for the bin
-            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / len(
-                flux_errors_in_bin
-            )
+            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2))
 
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
