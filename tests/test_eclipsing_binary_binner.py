@@ -375,10 +375,14 @@ def test_calculate_eclipse_bins_with_real_data(
         binner.calculate_eclipse_bins(binner.primary_eclipse),
         binner.calculate_eclipse_bins(binner.secondary_eclipse),
     )
-    
+
     # Check if the bin edges are unique
     assert len(np.unique(primary_bin_right_edges)) == len(primary_bin_right_edges)
     assert len(np.unique(secondary_bin_right_edges)) == len(secondary_bin_right_edges)
+
+    # Check if there are more than one right bin edges
+    assert len(primary_bin_right_edges) > 1
+    assert len(secondary_bin_right_edges) > 1
 
     # Check if the bin edges are within the range [0, 1)
     assert np.all(primary_bin_right_edges <= 1) and np.all(primary_bin_right_edges >= 0)
