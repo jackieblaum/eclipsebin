@@ -428,7 +428,7 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
     assert len(bin_errors) == len(bin_centers)
-    assert np.all(bin_errors >= 0)
+    assert np.all(bin_errors > 0)
     assert not np.any(np.isnan(bin_centers))
     assert not np.any(np.isnan(bin_means))
     assert not np.any(np.isnan(bin_errors))
@@ -443,7 +443,7 @@ def test_bin_calculation(wrapped_light_curve, unwrapped_light_curve):
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
     assert len(bin_errors) == len(bin_centers)
-    assert np.all(bin_errors >= 0)
+    assert np.all(bin_errors > 0)
     assert not np.any(np.isnan(bin_centers))
     assert not np.any(np.isnan(bin_means))
     assert not np.any(np.isnan(bin_errors))
