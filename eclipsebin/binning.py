@@ -192,46 +192,11 @@ class EclipsingBinaryBinner:
         """
         Finds the bin edges within the light curve.
         """
-        bins_in_primary = int(
-            (self.params["nbins"] * self.params["fraction_in_eclipse"]) / 2
-        )
-        if self.primary_eclipse[0] < self.primary_eclipse[1]:
-            primary_eclipse_data_points = np.sum(
-                (self.data["phases"] >= self.primary_eclipse[0])
-                & (self.data["phases"] <= self.primary_eclipse[1])
-            )
-        else:
-            primary_eclipse_data_points = np.sum(
-                (self.data["phases"] <= self.primary_eclipse[0])
-                | (self.data["phases"] >= self.primary_eclipse[1])
-            )
-        bins_in_primary = min(bins_in_primary, primary_eclipse_data_points)
-
-        bins_in_secondary = int(
-            (self.params["nbins"] * self.params["fraction_in_eclipse"])
-            - bins_in_primary
-        )
-        if self.secondary_eclipse[0] < self.secondary_eclipse[1]:
-            secondary_eclipse_data_points = np.sum(
-                (self.data["phases"] >= self.secondary_eclipse[0])
-                & (self.data["phases"] <= self.secondary_eclipse[1])
-            )
-        else:
-            secondary_eclipse_data_points = np.sum(
-                (self.data["phases"] <= self.secondary_eclipse[0])
-                | (self.data["phases"] >= self.secondary_eclipse[1])
-            )
-        bins_in_secondary = min(bins_in_secondary, secondary_eclipse_data_points)
-
-        primary_bin_edges = self.calculate_eclipse_bins(
-            self.primary_eclipse, bins_in_primary
-        )
-        secondary_bin_edges = self.calculate_eclipse_bins(
-            self.secondary_eclipse, bins_in_secondary
-        )
+        primary_bin_edges = self.calculate_eclipse_bins(self.primary_eclipse)
+        secondary_bin_edges = self.calculate_eclipse_bins(self.secondary_eclipse)
 
         ooe1_bins, ooe2_bins = self.calculate_out_of_eclipse_bins(
-            bins_in_primary, bins_in_secondary
+            len(primary_bin_edges), len(secondary_bin_edges)
         )
 
         all_bins = np.sort(
@@ -281,15 +246,12 @@ class EclipsingBinaryBinner:
 
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
-    def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse=None):
+    def calculate_eclipse_bins(self, eclipse_boundaries):
         """
         Calculates bin edges within an eclipse using Bayesian Blocks.
 
         Args:
             eclipse_boundaries (tuple): Start and end phases of the eclipse.
-            bins_in_eclipse (int, optional): Number of bins within the eclipse.
-                                            If provided, will act as a fallback to qcut.
-                                            If None, Bayesian Blocks will be used exclusively.
 
         Returns:
             np.ndarray: Array of bin edges within the eclipse.
@@ -311,20 +273,8 @@ class EclipsingBinaryBinner:
         # Ensure we have enough data points
         if len(eclipse_phases) < 2:
             raise ValueError("Not enough phase data within the eclipse region.")
-        # Step 1: Use Bayesian Blocks if no specific number of bins is requested
-        if bins_in_eclipse is None:
-            # Using Bayesian Blocks for adaptive binning
-            eclipse_bin_edges = bayesian_blocks(eclipse_phases)[1:]
-        else:
-            # Step 2: If bins_in_eclipse is specified, fallback to pd.qcut
-            if len(np.unique(eclipse_phases)) < bins_in_eclipse:
-                raise ValueError(
-                    "Not enough unique phase values to create the requested number of bins."
-                )
-            bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-            eclipse_bin_edges = np.array(
-                [interval.right for interval in np.unique(bins)]
-            )
+        # Using Bayesian Blocks for adaptive binning
+        eclipse_bin_edges = bayesian_blocks(eclipse_phases)[1:]
 
         # Ensure bin edges are wrapped back into the [0, 1) phase range
         return eclipse_bin_edges % 1

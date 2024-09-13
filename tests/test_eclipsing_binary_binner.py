@@ -108,10 +108,10 @@ def test_initialization_with_real_data(
         tess_unwrapped_light_curve,
     ]:
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors, nbins=50, fraction_in_eclipse=0.3
+            phases, fluxes, flux_errors, nbins=200, fraction_in_eclipse=0.5
         )
-        assert binner.params["nbins"] == 50
-        assert binner.params["fraction_in_eclipse"] == 0.3
+        assert binner.params["nbins"] == 200
+        assert binner.params["fraction_in_eclipse"] == 0.5
         assert len(binner.data["phases"]) == len(phases)
         assert len(binner.data["fluxes"]) == len(phases)
         assert len(binner.data["flux_errors"]) == len(phases)
@@ -186,7 +186,7 @@ def test_find_eclipse_minima_with_real_data(
         asas_sn_unwrapped_light_curve,
         tess_unwrapped_light_curve,
     ]:
-        binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
+        binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=200)
         primary_minimum_phase = binner.find_minimum_flux()
         assert 0 <= primary_minimum_phase <= 1.0
 
@@ -282,7 +282,7 @@ def test_eclipse_detection_with_real_data(
     """
     # Test with ASAS-SN data
     phases, fluxes, flux_errors = asas_sn_unwrapped_light_curve
-    binner_asas_sn = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
+    binner_asas_sn = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=200)
     primary_min_asas_sn = binner_asas_sn.find_minimum_flux()
     primary_eclipse_asas_sn = binner_asas_sn.get_eclipse_boundaries(primary=True)
     assert primary_eclipse_asas_sn[0] < primary_min_asas_sn < primary_eclipse_asas_sn[1]
@@ -314,28 +314,17 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     # Test the wrapped light curve
     phases, fluxes, flux_errors = wrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bins_in_primary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"]) / 2
-    )
-    bins_in_secondary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"])
-        - bins_in_primary
-    )
 
     primary_bin_right_edges = binner.calculate_eclipse_bins(
-        binner.primary_eclipse, bins_in_primary
+        binner.primary_eclipse
     )
     secondary_bin_right_edges = binner.calculate_eclipse_bins(
-        binner.secondary_eclipse, bins_in_secondary
+        binner.secondary_eclipse
     )
 
-    # Check if the number of bin edges are as expected
-    assert len(primary_bin_right_edges) == bins_in_primary
-    assert len(secondary_bin_right_edges) == bins_in_secondary
-
     # Check if the bin edges are unique
-    assert len(np.unique(primary_bin_right_edges)) == bins_in_primary
-    assert len(np.unique(secondary_bin_right_edges)) == bins_in_secondary
+    assert len(np.unique(primary_bin_right_edges)) == len(primary_bin_right_edges)
+    assert len(np.unique(secondary_bin_right_edges)) == len(secondary_bin_right_edges)
 
     # Check if the bin edges are within the range [0, 1)
     assert np.all(primary_bin_right_edges <= 1) and np.all(primary_bin_right_edges >= 0)
@@ -346,38 +335,20 @@ def test_calculate_eclipse_bins(wrapped_light_curve, unwrapped_light_curve):
     # Test the unwrapped light curve
     phases, fluxes, flux_errors = unwrapped_light_curve
     binner_unwrapped = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bins_in_primary_unwrapped = int(
-        (
-            binner_unwrapped.params["nbins"]
-            * binner_unwrapped.params["fraction_in_eclipse"]
-        )
-        / 2
-    )
-    bins_in_secondary_unwrapped = int(
-        (
-            binner_unwrapped.params["nbins"]
-            * binner_unwrapped.params["fraction_in_eclipse"]
-        )
-        - bins_in_primary_unwrapped
-    )
 
     primary_bin_right_edges_unwrapped = binner_unwrapped.calculate_eclipse_bins(
-        binner_unwrapped.primary_eclipse, bins_in_primary_unwrapped
+        binner_unwrapped.primary_eclipse
     )
     secondary_bin_right_edges_unwrapped = binner_unwrapped.calculate_eclipse_bins(
-        binner_unwrapped.secondary_eclipse, bins_in_secondary_unwrapped
+        binner_unwrapped.secondary_eclipse
     )
-    # Check if the number of bin edges are as expected
-    assert len(primary_bin_right_edges_unwrapped) == bins_in_primary_unwrapped
-    assert len(secondary_bin_right_edges_unwrapped) == bins_in_secondary_unwrapped
-
     # Check if the bin edges are unique
     assert (
-        len(np.unique(primary_bin_right_edges_unwrapped)) == bins_in_primary_unwrapped
+        len(np.unique(primary_bin_right_edges_unwrapped)) == len(primary_bin_right_edges_unwrapped)
     )
     assert (
         len(np.unique(secondary_bin_right_edges_unwrapped))
-        == bins_in_secondary_unwrapped
+        == len(secondary_bin_right_edges_unwrapped)
     )
 
     # Check if the bin edges are within the range [0, 1)
@@ -397,27 +368,17 @@ def test_calculate_eclipse_bins_with_real_data(
     """
     # Test with ASAS-SN data
     phases, fluxes, flux_errors = asas_sn_unwrapped_light_curve
-    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bins_in_primary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"]) / 2
-    )
-    bins_in_secondary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"])
-        - bins_in_primary
-    )
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=200)
 
     # Combine bin calculations into a single function call
     primary_bin_right_edges, secondary_bin_right_edges = (
-        binner.calculate_eclipse_bins(binner.primary_eclipse, bins_in_primary),
-        binner.calculate_eclipse_bins(binner.secondary_eclipse, bins_in_secondary),
+        binner.calculate_eclipse_bins(binner.primary_eclipse),
+        binner.calculate_eclipse_bins(binner.secondary_eclipse),
     )
-    # Check if the number of bin edges are as expected
-    assert len(primary_bin_right_edges) == bins_in_primary
-    assert len(secondary_bin_right_edges) == bins_in_secondary
-
+    
     # Check if the bin edges are unique
-    assert len(np.unique(primary_bin_right_edges)) == bins_in_primary
-    assert len(np.unique(secondary_bin_right_edges)) == bins_in_secondary
+    assert len(np.unique(primary_bin_right_edges)) == len(primary_bin_right_edges)
+    assert len(np.unique(secondary_bin_right_edges)) == len(secondary_bin_right_edges)
 
     # Check if the bin edges are within the range [0, 1)
     assert np.all(primary_bin_right_edges <= 1) and np.all(primary_bin_right_edges >= 0)
@@ -426,26 +387,16 @@ def test_calculate_eclipse_bins_with_real_data(
     # Test with TESS data
     phases, fluxes, flux_errors = tess_unwrapped_light_curve
     binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
-    bins_in_primary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"]) / 2
-    )
-    bins_in_secondary = int(
-        (binner.params["nbins"] * binner.params["fraction_in_eclipse"])
-        - bins_in_primary
-    )
 
     # Combine bin calculations into a single function call
     primary_bin_right_edges, secondary_bin_right_edges = (
-        binner.calculate_eclipse_bins(binner.primary_eclipse, bins_in_primary),
-        binner.calculate_eclipse_bins(binner.secondary_eclipse, bins_in_secondary),
+        binner.calculate_eclipse_bins(binner.primary_eclipse),
+        binner.calculate_eclipse_bins(binner.secondary_eclipse),
     )
-    # Check if the number of bin edges are as expected
-    assert len(primary_bin_right_edges) == bins_in_primary
-    assert len(secondary_bin_right_edges) == bins_in_secondary
 
     # Check if the bin edges are unique
-    assert len(np.unique(primary_bin_right_edges)) == bins_in_primary
-    assert len(np.unique(secondary_bin_right_edges)) == bins_in_secondary
+    assert len(np.unique(primary_bin_right_edges)) == len(primary_bin_right_edges)
+    assert len(np.unique(secondary_bin_right_edges)) == len(secondary_bin_right_edges)
 
     # Check if the bin edges are within the range [0, 1)
     assert np.all(primary_bin_right_edges <= 1) and np.all(primary_bin_right_edges >= 0)
@@ -529,7 +480,7 @@ def test_calculate_out_of_eclipse_bins_with_real_data(
     """
     # Test with ASAS-SN data
     phases, fluxes, flux_errors = asas_sn_unwrapped_light_curve
-    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=50)
+    binner = EclipsingBinaryBinner(phases, fluxes, flux_errors, nbins=200)
     bins_in_primary = int(
         (binner.params["nbins"] * binner.params["fraction_in_eclipse"]) / 2
     )
@@ -632,7 +583,7 @@ def test_find_bin_edges_with_real_data(
     # Test the ASAS-SN unwrapped light curve
     phases_asas, fluxes_asas, flux_errors_asas = asas_sn_unwrapped_light_curve
     binner_asas = EclipsingBinaryBinner(
-        phases_asas, fluxes_asas, flux_errors_asas, nbins=50
+        phases_asas, fluxes_asas, flux_errors_asas, nbins=200
     )
     all_bins_asas = binner_asas.find_bin_edges()
     # Check if the bins are sorted
@@ -694,7 +645,7 @@ def test_shift_bins_with_real_data(
     # Test the ASAS-SN unwrapped light curve
     phases_asas, fluxes_asas, flux_errors_asas = asas_sn_unwrapped_light_curve
     binner_asas = EclipsingBinaryBinner(
-        phases_asas, fluxes_asas, flux_errors_asas, nbins=50
+        phases_asas, fluxes_asas, flux_errors_asas, nbins=200
     )
     all_bins_asas = binner_asas.find_bin_edges()
     shifted_bins_asas = binner_asas.shift_bin_edges(all_bins_asas)
@@ -759,7 +710,7 @@ def test_bin_calculation_with_real_data(
     # Test ASAS-SN unwrapped light curve
     phases, fluxes, flux_errors = asas_sn_unwrapped_light_curve
     binner = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors, nbins=50
+        phases, fluxes, flux_errors, nbins=200
     )
     bin_centers, bin_means, bin_errors, bin_numbers, _ = (
         binner.calculate_bins()
