@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import matplotlib.pyplot as plt
+from astropy.stats import bayesian_blocks
 
 
 class EclipsingBinaryBinner:
@@ -280,36 +281,53 @@ class EclipsingBinaryBinner:
 
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
-    def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
+    def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse=None):
         """
-        Calculates bin edges within an eclipse.
+        Calculates bin edges within an eclipse using Bayesian Blocks.
 
         Args:
             eclipse_boundaries (tuple): Start and end phases of the eclipse.
-            bins_in_eclipse (int): Number of bins within the eclipse.
+            bins_in_eclipse (int, optional): Number of bins within the eclipse.
+                                            If provided, will act as a fallback to qcut.
+                                            If None, Bayesian Blocks will be used exclusively.
 
         Returns:
             np.ndarray: Array of bin edges within the eclipse.
         """
+        # Find the start and end indices based on eclipse boundaries
         start_idx, end_idx = np.searchsorted(self.data["phases"], eclipse_boundaries)
+        # Handle wrap-around phases (if the eclipse spans 0 to 1 boundary)
         eclipse_phases = (
             np.concatenate(
                 (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
+                    self.data["phases"][start_idx:],  # Phases after start_idx
+                    self.data["phases"][: end_idx + 1] + 1,  # Wrap-around phases
                 )
             )
             if end_idx < start_idx
             else self.data["phases"][start_idx : end_idx + 1]
         )
-        # Ensure there are enough unique phases for the number of bins requested
-        if len(np.unique(eclipse_phases)) < bins_in_eclipse:
-            raise ValueError(
-                "Not enough unique phase values to create the requested number of bins."
+
+        # Ensure we have enough data points
+        if len(eclipse_phases) < 2:
+            raise ValueError("Not enough phase data within the eclipse region.")
+        # Step 1: Use Bayesian Blocks if no specific number of bins is requested
+        if bins_in_eclipse is None:
+            # Using Bayesian Blocks for adaptive binning
+            eclipse_bin_edges = bayesian_blocks(eclipse_phases)[1:]
+        else:
+            # Step 2: If bins_in_eclipse is specified, fallback to pd.qcut
+            if len(np.unique(eclipse_phases)) < bins_in_eclipse:
+                raise ValueError(
+                    "Not enough unique phase values to create the requested number of bins."
+                )
+            bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
+            eclipse_bin_edges = np.array(
+                [interval.right for interval in np.unique(bins)]
             )
 
-        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-        return np.array([interval.right for interval in np.unique(bins)]) % 1
+        # Ensure bin edges are wrapped back into the [0, 1) phase range
+        return eclipse_bin_edges % 1
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
