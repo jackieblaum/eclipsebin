@@ -68,3 +68,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ![NSF](docs/images/nsf_logo.jpeg)
 
 This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 2206744 & DGE 2146752. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
+
+The test suite for this package uses real light curve data from the following sources:
+
+- **TESS (Transiting Exoplanet Survey Satellite)**: 
+  - Citation: Ricker, G. R., et al. (2015). "Transiting Exoplanet Survey Satellite (TESS)." Journal of Astronomical Telescopes, Instruments, and Systems, 1(1), 014003. DOI: [10.1117/1.JATIS.1.1.014003](https://doi.org/10.1117/1.JATIS.1.1.014003)
+  - Data archive: [https://archive.stsci.edu/tess/](https://archive.stsci.edu/tess/)
+
+- **ASAS-SN (All-Sky Automated Survey for Supernovae)**:
+  - Citation: Shappee, B. J., et al. (2014). "The All-Sky Automated Survey for Supernovae (ASAS-SN) Light Curve Data." The Astrophysical Journal, 788(1), 48. DOI: [10.1088/0004-637X/788/1/48](https://doi.org/10.1088/0004-637X/788/1/48)
+  - Data archive: [https://asas-sn.osu.edu/](https://asas-sn.osu.edu/)
+
