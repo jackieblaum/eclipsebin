@@ -5,6 +5,7 @@ of eclipsing binary star light curves.
 
 import numpy as np
 import pandas as pd
+from collections import defaultdict
 from scipy import stats
 import matplotlib.pyplot as plt
 from astropy.stats import bayesian_blocks
@@ -259,25 +260,40 @@ class EclipsingBinaryBinner:
         # Find the start and end indices based on eclipse boundaries
         start_idx, end_idx = np.searchsorted(self.data["phases"], eclipse_boundaries)
         # Handle wrap-around phases (if the eclipse spans 0 to 1 boundary)
-        eclipse_phases = (
-            np.concatenate(
+        if end_idx < start_idx:
+            eclipse_phases = np.concatenate(
+                    (
+                        self.data["phases"][start_idx:],  # Phases after start_idx
+                        self.data["phases"][: end_idx + 1] + 1  # Wrap-around phases
+                    )
+                )
+            eclipse_fluxes = np.concatenate(
                 (
-                    self.data["phases"][start_idx:],  # Phases after start_idx
-                    self.data["phases"][: end_idx + 1] + 1,  # Wrap-around phases
+                    self.data["fluxes"][start_idx:],
+                    self.data["fluxes"][:end_idx + 1] + 1
                 )
             )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+        else:
+            eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
+            eclipse_fluxes = self.data["fluxes"][start_idx : end_idx + 1]
+
+        # Aggregate (average) flux values for duplicate phases
+        unique_phases = defaultdict(list)
+        for phase, flux in zip(eclipse_phases, eclipse_fluxes):
+            unique_phases[phase].append(flux)
+
+        # Compute average flux for each unique phase
+        averaged_phases = np.array(list(unique_phases.keys()))
+        averaged_fluxes = np.array([np.mean(f) for f in unique_phases.values()])
 
         # Ensure we have enough data points
-        if len(eclipse_phases) < 2:
+        if len(averaged_phases) < 2:
             raise ValueError("Not enough phase data within the eclipse region.")
         # Using Bayesian Blocks for adaptive binning
-        eclipse_bin_edges = bayesian_blocks(eclipse_phases)[1:]
+        eclipse_bin_edges = bayesian_blocks(averaged_phases, x=averaged_fluxes, fitness="measures",p0=1e-10)
 
         # Ensure bin edges are wrapped back into the [0, 1) phase range
-        return eclipse_bin_edges % 1
+        return np.unique(eclipse_bin_edges)[1:] % 1
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
