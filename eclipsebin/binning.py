@@ -302,6 +302,12 @@ class EclipsingBinaryBinner:
             if end_idx < start_idx
             else self.data["phases"][start_idx : end_idx + 1]
         )
+        # Ensure there are enough unique phases for the number of bins requested
+        if len(np.unique(eclipse_phases)) < bins_in_eclipse:
+            raise ValueError(
+                "Not enough unique phase values to create the requested number of bins."
+            )
+
         bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
         return np.array([interval.right for interval in np.unique(bins)]) % 1
 
