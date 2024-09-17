@@ -46,10 +46,12 @@ class EclipsingBinaryBinner:
             raise ValueError("Number of data points must be at least 10.")
         if nbins < 10:
             raise ValueError("Number of bins must be at least 10.")
-        if len(phases) < nbins:
+        if len(phases) < 5 * nbins:
             raise ValueError(
-                "Number of data points must be greater than or equal to the number of bins."
+                "Number of data points must be greater than or equal to 5 times the number of bins."
             )
+        if np.any(flux_errors) <= 0:
+            raise ValueError("Flux errors must be > 0.")
         sort_idx = np.argsort(phases)
         self.data = {
             "phases": phases[sort_idx],
@@ -187,40 +189,55 @@ class EclipsingBinaryBinner:
         boundary_index = np.where(np.isclose(phases, boundary_phase, atol=0.0001))[0][0]
         return boundary_index
 
-    def find_bin_edges(self):
+    def calculate_eclipse_bins_distribution(self):
         """
-        Finds the bin edges within the light curve.
+        Calculates the number of bins to allocate to the primary and secondary eclipses.
+
+        Returns:
+            tuple: Number of bins in the primary eclipse, number of bins in the secondary eclipse.
         """
         bins_in_primary = int(
             (self.params["nbins"] * self.params["fraction_in_eclipse"]) / 2
         )
-        if self.primary_eclipse[0] < self.primary_eclipse[1]:
-            primary_eclipse_data_points = np.sum(
-                (self.data["phases"] >= self.primary_eclipse[0])
-                & (self.data["phases"] <= self.primary_eclipse[1])
+        start_idx, end_idx = np.searchsorted(self.data["phases"], self.primary_eclipse)
+        eclipse_phases = (
+            np.concatenate(
+                (
+                    self.data["phases"][start_idx:],
+                    self.data["phases"][: end_idx + 1] + 1,
+                )
             )
-        else:
-            primary_eclipse_data_points = np.sum(
-                (self.data["phases"] <= self.primary_eclipse[0])
-                | (self.data["phases"] >= self.primary_eclipse[1])
-            )
-        bins_in_primary = min(bins_in_primary, primary_eclipse_data_points)
+            if end_idx < start_idx
+            else self.data["phases"][start_idx : end_idx + 1]
+        )
+        bins_in_primary = min(bins_in_primary, len(np.unique(eclipse_phases)))
 
         bins_in_secondary = int(
             (self.params["nbins"] * self.params["fraction_in_eclipse"])
             - bins_in_primary
         )
-        if self.secondary_eclipse[0] < self.secondary_eclipse[1]:
-            secondary_eclipse_data_points = np.sum(
-                (self.data["phases"] >= self.secondary_eclipse[0])
-                & (self.data["phases"] <= self.secondary_eclipse[1])
+        start_idx, end_idx = np.searchsorted(
+            self.data["phases"], self.secondary_eclipse
+        )
+        eclipse_phases = (
+            np.concatenate(
+                (
+                    self.data["phases"][start_idx:],
+                    self.data["phases"][: end_idx + 1] + 1,
+                )
             )
-        else:
-            secondary_eclipse_data_points = np.sum(
-                (self.data["phases"] <= self.secondary_eclipse[0])
-                | (self.data["phases"] >= self.secondary_eclipse[1])
-            )
-        bins_in_secondary = min(bins_in_secondary, secondary_eclipse_data_points)
+            if end_idx < start_idx
+            else self.data["phases"][start_idx : end_idx + 1]
+        )
+        bins_in_secondary = min(bins_in_secondary, len(np.unique(eclipse_phases)))
+        return bins_in_primary, bins_in_secondary
+
+    def find_bin_edges(self):
+        """
+        Finds the bin edges within the light curve.
+        """
+
+        bins_in_primary, bins_in_secondary = self.calculate_eclipse_bins_distribution()
 
         primary_bin_edges = self.calculate_eclipse_bins(
             self.primary_eclipse, bins_in_primary
@@ -238,6 +255,16 @@ class EclipsingBinaryBinner:
                 (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
             )
         )
+        if len(np.unique(all_bins)) != len(all_bins):
+            if self.params["fraction_in_eclipse"] > 0.1:
+                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
+                print(
+                    f"Binning resulted in repeat edges; trying again with "
+                    f"fraction_in_eclipse={new_fraction_in_eclipse}"
+                )
+                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                return self.find_bin_edges()
+            raise ValueError("Not enough data to bin these eclipses.")
         return all_bins
 
     def shift_bin_edges(self, bins):
@@ -247,6 +274,7 @@ class EclipsingBinaryBinner:
         rightmost_edge = bins[-1]
         shifted_bins = bins + (1 - rightmost_edge)
         self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
+        shifted_bins = np.concatenate([[0], shifted_bins])
         return shifted_bins
 
     def calculate_bins(self):
@@ -268,16 +296,29 @@ class EclipsingBinaryBinner:
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_errors = np.zeros(len(bin_means))
         # Calculate the propagated errors for each bin
-        for i in range(len(shifted_bins) - 1):
+        bincounts = np.bincount(bin_number)[1:]
+        for i in range(len(bin_means)):
             # Get the indices of the data points in this bin
             bin_mask = (self.data["shifted_phases"] >= shifted_bins[i]) & (
                 self.data["shifted_phases"] < shifted_bins[i + 1]
             )
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
+            if len(flux_errors_in_bin) != bincounts[i]:
+                raise ValueError("Incorrect bin masking.")
             # Calculate the propagated error for the bin
             bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2))
 
+        if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
+            if self.params["fraction_in_eclipse"] > 0.1:
+                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
+                print(
+                    f"Requested fraction of bins in eclipse regions results in empty bins; "
+                    f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
+                )
+                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                return self.calculate_bins()
+            raise ValueError("Not enough data to bin these eclipses.")
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
     def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
