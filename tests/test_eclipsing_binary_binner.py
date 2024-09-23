@@ -218,20 +218,20 @@ def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_e
         nbins=nbins,
         fraction_in_eclipse=fraction_in_eclipse,
     )
-    primary_minimum_phase = binner.find_minimum_flux()
+    primary_minimum_phase = binner.find_minimum_flux_phase()
     assert 0 <= primary_minimum_phase <= 1.0
 
-    secondary_minimum_phase = binner.find_secondary_minimum()
+    secondary_minimum_phase = binner.find_secondary_minimum_phase()
     assert 0 <= secondary_minimum_phase <= 1.0
 
     bins = binner.find_bin_edges()
     _ = binner.shift_bin_edges(bins)
 
-    primary_minimum_shifted_phase = binner.find_minimum_flux(use_shifted_phases=True)
+    primary_minimum_shifted_phase = binner.find_minimum_flux_phase(use_shifted_phases=True)
     assert primary_minimum_shifted_phase >= primary_minimum_phase
     assert 0 <= primary_minimum_shifted_phase <= 1.0
 
-    secondary_minimum_shifted_phase = binner.find_secondary_minimum(
+    secondary_minimum_shifted_phase = binner.find_secondary_minimum_phase(
         use_shifted_phases=True
     )
     assert secondary_minimum_shifted_phase >= secondary_minimum_phase
@@ -260,7 +260,7 @@ def helper_eclipse_detection(
     bins = binner.find_bin_edges()
     _ = binner.shift_bin_edges(bins)
     for shifted in [False, True]:
-        primary_min = binner.find_minimum_flux(use_shifted_phases=shifted)
+        primary_min = binner.find_minimum_flux_phase(use_shifted_phases=shifted)
         primary_eclipse = binner.get_eclipse_boundaries(
             primary=True, use_shifted_phases=shifted
         )
@@ -270,7 +270,7 @@ def helper_eclipse_detection(
         if not wrapped["primary"]:
             assert primary_eclipse[0] < primary_min < primary_eclipse[1]
 
-        secondary_min = binner.find_secondary_minimum(use_shifted_phases=shifted)
+        secondary_min = binner.find_secondary_minimum_phase(use_shifted_phases=shifted)
         secondary_eclipse = binner.get_eclipse_boundaries(
             primary=False, use_shifted_phases=shifted
         )

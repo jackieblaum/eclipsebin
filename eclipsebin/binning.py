@@ -61,14 +61,14 @@ class EclipsingBinaryBinner:
         self.params = {"nbins": nbins, "fraction_in_eclipse": fraction_in_eclipse}
 
         # Identify primary and secondary eclipse minima
-        self.primary_eclipse_min_phase = self.find_minimum_flux()
-        self.secondary_eclipse_min_phase = self.find_secondary_minimum()
+        self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
 
         # Determine start and end of each eclipse
         self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
         self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
 
-    def find_minimum_flux(self, use_shifted_phases=False):
+    def find_minimum_flux_phase(self, use_shifted_phases=False):
         """
         Finds the phase of the minimum flux, corresponding to the primary eclipse.
 
@@ -85,8 +85,11 @@ class EclipsingBinaryBinner:
             phases = self.data["phases"]
         idx_min = np.argmin(self.data["fluxes"])
         return phases[idx_min]
+    
+    def find_minimum_flux(self):
+        return np.min(self.data["fluxes"])
 
-    def find_secondary_minimum(self, use_shifted_phases=False):
+    def find_secondary_minimum_phase(self, use_shifted_phases=False):
         """
         Finds the phase of the secondary eclipse by identifying the minimum flux
         at least 0.2 phase units away from the primary eclipse.
@@ -94,15 +97,23 @@ class EclipsingBinaryBinner:
         Returns:
             float: Phase value of the secondary eclipse minimum.
         """
+        phases, mask = self._helper_secondary_minimum_mask(use_shifted_phases=use_shifted_phases)
+        idx_secondary_min = np.argmin(self.data["fluxes"][mask])
+        return phases[mask][idx_secondary_min]
+    
+    def find_secondary_minimum(self):
+        _, mask = self._helper_secondary_minimum_mask()
+        return np.min(self.data["fluxes"][mask])
+
+    def _helper_secondary_minimum_mask(self, use_shifted_phases=False):
         if use_shifted_phases:
             phases = self.data["shifted_phases"]
-            primary_min_phase = self.find_minimum_flux(use_shifted_phases=True)
+            primary_min_phase = self.find_minimum_flux_phase(use_shifted_phases=True)
         else:
             phases = self.data["phases"]
             primary_min_phase = self.primary_eclipse_min_phase
         mask = np.abs(phases - primary_min_phase) > 0.2
-        idx_secondary_min = np.argmin(self.data["fluxes"][mask])
-        return phases[mask][idx_secondary_min]
+        return phases, mask
 
     def get_eclipse_boundaries(self, primary=True, use_shifted_phases=False):
         """
@@ -117,9 +128,9 @@ class EclipsingBinaryBinner:
         if use_shifted_phases:
             phases = self.data["shifted_phases"]
             if primary:
-                eclipse_min_phase = self.find_minimum_flux(use_shifted_phases=True)
+                eclipse_min_phase = self.find_minimum_flux_phase(use_shifted_phases=True)
             else:
-                eclipse_min_phase = self.find_secondary_minimum(use_shifted_phases=True)
+                eclipse_min_phase = self.find_secondary_minimum_phase(use_shifted_phases=True)
         else:
             phases = self.data["phases"]
             if primary:
@@ -172,14 +183,18 @@ class EclipsingBinaryBinner:
         else:  # direction == 'end'
             mask = phases > eclipse_min_phase
 
-        idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=0.01))[
+        min_flux_idx = np.where(phases == eclipse_min_phase)[0][0]
+        min_flux = self.data["fluxes"][min_flux_idx]
+        atol = self._get_atol(min_flux)
+
+        idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
         ]
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
             if direction == "start":
-                return np.where(np.isclose(self.data["fluxes"], 1.0, atol=0.01))[0][-1]
-            return np.where(np.isclose(self.data["fluxes"], 1.0, atol=0.01))[0][0]
+                return np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0][-1]
+            return np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0][0]
         # Return the last or first index depending on direction
         boundary_phase = (
             max(phases[idx_boundary])
@@ -188,6 +203,10 @@ class EclipsingBinaryBinner:
         )
         boundary_index = np.where(np.isclose(phases, boundary_phase, atol=0.0001))[0][0]
         return boundary_index
+
+    def _get_atol(self, min_flux):
+        proximity_to_one = 1 - min_flux
+        return proximity_to_one * 0.1
 
     def calculate_eclipse_bins_distribution(self):
         """
