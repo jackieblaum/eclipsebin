@@ -97,7 +97,7 @@ def test_unwrapped_light_curves(
     nbins,
 ):
     """
-    Call tests on the light curves in which neither the primary nor 
+    Call tests on the light curves in which neither the primary nor
     secondary eclipse crosses the 1-0 phase boundary.
     """
     unwrapped_light_curves = [
@@ -107,8 +107,12 @@ def test_unwrapped_light_curves(
     ]
     for phases, fluxes, flux_errors in unwrapped_light_curves:
         helper_eclipse_detection(
-            phases, fluxes, flux_errors, nbins, fraction_in_eclipse,
-            wrapped={"primary": False, "secondary": False}
+            phases,
+            fluxes,
+            flux_errors,
+            nbins,
+            fraction_in_eclipse,
+            wrapped={"primary": False, "secondary": False},
         )
         helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
         helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
@@ -227,7 +231,9 @@ def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_e
     bins = binner.find_bin_edges()
     _ = binner.shift_bin_edges(bins)
 
-    primary_minimum_shifted_phase = binner.find_minimum_flux_phase(use_shifted_phases=True)
+    primary_minimum_shifted_phase = binner.find_minimum_flux_phase(
+        use_shifted_phases=True
+    )
     assert primary_minimum_shifted_phase >= primary_minimum_phase
     assert 0 <= primary_minimum_shifted_phase <= 1.0
 
@@ -239,12 +245,7 @@ def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_e
 
 
 def helper_eclipse_detection(
-    phases,
-    fluxes,
-    flux_errors,
-    nbins,
-    fraction_in_eclipse,
-    wrapped
+    phases, fluxes, flux_errors, nbins, fraction_in_eclipse, wrapped
 ):
     """
     Test the eclipse detection capabilities of EclipsingBinaryBinner on a wrapped light curve.

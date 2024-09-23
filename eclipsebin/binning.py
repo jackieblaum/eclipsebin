@@ -85,8 +85,14 @@ class EclipsingBinaryBinner:
             phases = self.data["phases"]
         idx_min = np.argmin(self.data["fluxes"])
         return phases[idx_min]
-    
+
     def find_minimum_flux(self):
+        """
+        Finds the minimum flux value in the light curve data.
+
+        Returns:
+            float: The minimum flux value.
+        """
         return np.min(self.data["fluxes"])
 
     def find_secondary_minimum_phase(self, use_shifted_phases=False):
@@ -100,8 +106,14 @@ class EclipsingBinaryBinner:
         phases, mask = self._helper_secondary_minimum_mask(use_shifted_phases=use_shifted_phases)
         idx_secondary_min = np.argmin(self.data["fluxes"][mask])
         return phases[mask][idx_secondary_min]
-    
+
     def find_secondary_minimum(self):
+        """
+        Finds the minimum flux value in the secondary eclipse region.
+
+        Returns:
+            float: The minimum flux value in the secondary eclipse region.
+        """
         _, mask = self._helper_secondary_minimum_mask()
         return np.min(self.data["fluxes"][mask])
 
