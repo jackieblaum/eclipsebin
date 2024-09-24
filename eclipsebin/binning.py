@@ -103,7 +103,9 @@ class EclipsingBinaryBinner:
         Returns:
             float: Phase value of the secondary eclipse minimum.
         """
-        phases, mask = self._helper_secondary_minimum_mask(use_shifted_phases=use_shifted_phases)
+        phases, mask = self._helper_secondary_minimum_mask(
+            use_shifted_phases=use_shifted_phases
+        )
         idx_secondary_min = np.argmin(self.data["fluxes"][mask])
         return phases[mask][idx_secondary_min]
 
@@ -140,9 +142,13 @@ class EclipsingBinaryBinner:
         if use_shifted_phases:
             phases = self.data["shifted_phases"]
             if primary:
-                eclipse_min_phase = self.find_minimum_flux_phase(use_shifted_phases=True)
+                eclipse_min_phase = self.find_minimum_flux_phase(
+                    use_shifted_phases=True
+                )
             else:
-                eclipse_min_phase = self.find_secondary_minimum_phase(use_shifted_phases=True)
+                eclipse_min_phase = self.find_secondary_minimum_phase(
+                    use_shifted_phases=True
+                )
         else:
             phases = self.data["phases"]
             if primary:
@@ -171,6 +177,31 @@ class EclipsingBinaryBinner:
             eclipse_min_phase, direction="end", use_shifted_phases=use_shifted_phases
         )
         return start_idx, end_idx
+
+    def _find_boundary_index(self, idx_boundary, phases, direction, atol):
+        nbins = int(len(idx_boundary) * 0.1)
+        bins = np.linspace(
+            min(phases[idx_boundary]), max(phases[idx_boundary]), nbins + 1
+        )
+        unbinned_data = pd.DataFrame(
+            {
+                "phase": phases[idx_boundary],
+                "flux": self.data["fluxes"][idx_boundary],
+            }
+        )
+        unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=bins)
+        binned_data = unbinned_data.groupby("phase_bin")["flux"].median()
+        binned_data = binned_data.dropna()  # Drop any bins with NaN values
+        medians_closest_to_1 = np.where(np.isclose(binned_data, 1, atol=atol))[0]
+        phase_bin_idx = (
+            max(medians_closest_to_1)
+            if direction == "start"
+            else min(medians_closest_to_1)
+        )
+        selected_bin = unbinned_data["phase_bin"].cat.categories[phase_bin_idx]
+        mid = (selected_bin.left + selected_bin.right) / 2
+        boundary_index = np.argmin(np.abs(phases - mid))
+        return boundary_index
 
     def _find_eclipse_boundary(
         self, eclipse_min_phase, direction, use_shifted_phases=False
@@ -202,6 +233,13 @@ class EclipsingBinaryBinner:
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
         ]
+        if len(idx_boundary) > 100:
+            boundary_index = self._find_boundary_index(
+                idx_boundary, phases, direction, atol
+            )
+
+            return boundary_index
+
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
             if direction == "start":
