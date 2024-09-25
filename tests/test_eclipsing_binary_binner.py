@@ -211,6 +211,41 @@ def test_initialization_invalid_data(unwrapped_light_curve):
         EclipsingBinaryBinner(phases[:50], fluxes[:50], flux_errors[:50], nbins=60)
 
 
+@pytest.mark.parametrize("fraction_in_eclipse", [0.1, 0.2, 0.3, 0.4, 0.5])
+@pytest.mark.parametrize("nbins", [50, 100, 200])
+def test_get_atol(
+    unwrapped_light_curve,
+    wrapped_light_curve,
+    asas_sn_unwrapped_light_curve,
+    tess_unwrapped_light_curve,
+    nbins,
+    fraction_in_eclipse,
+):
+    """
+    Test the get_atol() method of EclipsingBinaryBinner.
+    """
+    light_curves = [
+        unwrapped_light_curve,
+        wrapped_light_curve,
+        asas_sn_unwrapped_light_curve,
+        tess_unwrapped_light_curve,
+    ]
+    atols = [[0.0001, 0.0001], [0.0001, 0.0001], [0.01, 0.01], [0.01, 0.005]]
+    for light_curve, atol in zip(light_curves, atols):
+        phases, fluxes, flux_errors = light_curve
+        binner = EclipsingBinaryBinner(
+            phases,
+            fluxes,
+            flux_errors,
+            nbins=nbins,
+            fraction_in_eclipse=fraction_in_eclipse,
+        )
+        binner.set_atol(primary=atol[0], secondary=atol[1])
+        assert binner.params["atol_primary"] == atol[0]
+        assert binner.params["atol_secondary"] == atol[1]
+        assert binner.get_atol(min(binner.data["fluxes"])) == atol[0]
+
+
 def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse):
     """
     Test the find_minimum_flux method of EclipsingBinaryBinner.
