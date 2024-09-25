@@ -58,7 +58,12 @@ class EclipsingBinaryBinner:
             "fluxes": fluxes[sort_idx],
             "flux_errors": flux_errors[sort_idx],
         }
-        self.params = {"nbins": nbins, "fraction_in_eclipse": fraction_in_eclipse}
+        self.params = {
+            "nbins": nbins,
+            "fraction_in_eclipse": fraction_in_eclipse,
+            "atol_primary": None,
+            "atol_secondary": None,
+        }
 
         # Identify primary and secondary eclipse minima
         self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
@@ -190,7 +195,9 @@ class EclipsingBinaryBinner:
             }
         )
         unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=bins)
-        binned_data = unbinned_data.groupby("phase_bin", observed=False)["flux"].median()
+        binned_data = unbinned_data.groupby("phase_bin", observed=False)[
+            "flux"
+        ].median()
         binned_data = binned_data.dropna()  # Drop any bins with NaN values
         medians_closest_to_1 = np.where(np.isclose(binned_data, 1, atol=atol))[0]
         phase_bin_idx = (
@@ -231,7 +238,7 @@ class EclipsingBinaryBinner:
 
         min_flux_idx = np.where(phases == eclipse_min_phase)[0][0]
         min_flux = self.data["fluxes"][min_flux_idx]
-        atol = self._get_atol(min_flux)
+        atol = self.get_atol(min_flux)
 
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
@@ -257,9 +264,28 @@ class EclipsingBinaryBinner:
         boundary_index = np.where(np.isclose(phases, boundary_phase, atol=0.0001))[0][0]
         return boundary_index
 
-    def _get_atol(self, min_flux):
+    def set_atol(self, primary=None, secondary=None):
+        """
+        Set atol for closeness to 1 in detecting eclipse boundaries.
+        """
+        if primary is not None:
+            self.params["atol_primary"] = primary
+        if secondary is not None:
+            self.params["atol_secondary"] = secondary
+        return 0
+
+    def get_atol(self, min_flux):
+        """
+        Get atol for closeness to 1 in detecting eclipse boundaries.
+        """
         proximity_to_one = 1 - min_flux
-        return proximity_to_one * 0.05
+        if min_flux == min(self.data["fluxes"]):
+            if self.params["atol_primary"] is None:
+                return proximity_to_one * 0.05
+            return self.params["atol_primary"]
+        if self.params["atol_secondary"] is None:
+            return proximity_to_one * 0.05
+        return self.params["atol_secondary"]
 
     def calculate_eclipse_bins_distribution(self):
         """
@@ -336,7 +362,10 @@ class EclipsingBinaryBinner:
                 )
                 self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
                 return self.find_bin_edges()
-            raise ValueError("Not enough data to bin these eclipses.")
+            raise ValueError(
+                "There may not be enough data to bin these eclipses. Try "
+                "changing the atol values for detecting eclipse boundaries with set_atol()."
+            )
         return all_bins
 
     def shift_bin_edges(self, bins):
