@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="eclipsebin",
-    version="0.3.1",
+    version="0.3.2",
     author="Jackie Blaum",
     author_email="jackie.blaum@gmail.com",
     description="A specialized binning scheme for eclipsing binary star light curves",
