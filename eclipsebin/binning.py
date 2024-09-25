@@ -190,7 +190,7 @@ class EclipsingBinaryBinner:
             }
         )
         unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=bins)
-        binned_data = unbinned_data.groupby("phase_bin")["flux"].median()
+        binned_data = unbinned_data.groupby("phase_bin", observed=False)["flux"].median()
         binned_data = binned_data.dropna()  # Drop any bins with NaN values
         medians_closest_to_1 = np.where(np.isclose(binned_data, 1, atol=atol))[0]
         phase_bin_idx = (
