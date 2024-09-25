@@ -191,7 +191,7 @@ class EclipsingBinaryBinner:
         )
         unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=bins)
         binned_data = unbinned_data.groupby("phase_bin")["flux"].median()
-        # binned_data = binned_data.dropna()  # Drop any bins with NaN values
+        binned_data = binned_data.dropna()  # Drop any bins with NaN values
         medians_closest_to_1 = np.where(np.isclose(binned_data, 1, atol=atol))[0]
         phase_bin_idx = (
             max(medians_closest_to_1)
@@ -201,9 +201,9 @@ class EclipsingBinaryBinner:
         selected_bin = unbinned_data["phase_bin"].cat.categories[phase_bin_idx]
         mid = (selected_bin.left + selected_bin.right) / 2
         boundary_index = np.argmin(np.abs(phases - mid))
-        bin_centers = [bins[i+1]/2 + bins[i]/2 for i in range(len(bins)-1)]
-        plt.scatter(bin_centers, binned_data)
-        plt.show()
+        # bin_centers = [bins[i+1]/2 + bins[i]/2 for i in range(len(bins)-1)]
+        # plt.scatter(bin_centers, binned_data)
+        # plt.show()
         return boundary_index
 
     def _find_eclipse_boundary(
