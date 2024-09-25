@@ -179,7 +179,7 @@ class EclipsingBinaryBinner:
         return start_idx, end_idx
 
     def _find_boundary_index(self, idx_boundary, phases, direction, atol):
-        nbins = int(len(idx_boundary) * 0.1)
+        nbins = 100
         bins = np.linspace(
             min(phases[idx_boundary]), max(phases[idx_boundary]), nbins + 1
         )
