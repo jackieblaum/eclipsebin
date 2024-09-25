@@ -202,7 +202,7 @@ class EclipsingBinaryBinner:
         mid = (selected_bin.left + selected_bin.right) / 2
         boundary_index = np.argmin(np.abs(phases - mid))
         bin_centers = [bins[i+1]/2 + bins[i]/2 for i in range(len(bins)-1)]
-        plt.scatter(len(bin_centers), len(binned_data))
+        plt.scatter(bin_centers, binned_data)
         plt.show()
         return boundary_index
 
