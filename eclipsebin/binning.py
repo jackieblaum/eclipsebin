@@ -259,7 +259,7 @@ class EclipsingBinaryBinner:
 
     def _get_atol(self, min_flux):
         proximity_to_one = 1 - min_flux
-        return proximity_to_one * 0.1
+        return proximity_to_one * 0.05
 
     def calculate_eclipse_bins_distribution(self):
         """
