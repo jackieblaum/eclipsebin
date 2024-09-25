@@ -261,7 +261,7 @@ class EclipsingBinaryBinner:
             if direction == "start"
             else min(phases[idx_boundary])
         )
-        boundary_index = np.where(np.isclose(phases, boundary_phase, atol=0.0001))[0][0]
+        boundary_index = np.argmin(np.abs(phases - boundary_phase))
         return boundary_index
 
     def set_atol(self, primary=None, secondary=None):
