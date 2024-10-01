@@ -26,7 +26,8 @@ class EclipsingBinaryBinner:
         secondary_eclipse (tuple): Start and end phase values of the secondary eclipse.
     """
 
-    def __init__(self, phases, fluxes, flux_errors, nbins=200, fraction_in_eclipse=0.2):
+    def __init__(self, phases, fluxes, flux_errors, nbins=200, fraction_in_eclipse=0.2,
+                 atol_primary=None, atol_secondary=None):
         """
         Initializes the EclipsingBinaryBinner with the given light curve data and parameters.
 
@@ -64,6 +65,8 @@ class EclipsingBinaryBinner:
             "atol_primary": None,
             "atol_secondary": None,
         }
+
+        self.set_atol(primary=atol_primary, secondary=atol_secondary)
 
         # Identify primary and secondary eclipse minima
         self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
