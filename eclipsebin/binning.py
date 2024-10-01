@@ -81,7 +81,7 @@ class EclipsingBinaryBinner:
             float: Phase value of the primary eclipse minimum.
         """
         if use_shifted_phases:
-            if "shifted_phases" in self.data:  # Changed to iterate directly
+            if "shifted_phases" in self.data:
                 phases = self.data["shifted_phases"]
             else:
                 print("Must shift phases first.")
@@ -244,14 +244,15 @@ class EclipsingBinaryBinner:
             0
         ]
         if len(idx_boundary) > 100:
+            print('Binning uniformly first to find eclipse ingress/egress...')
             boundary_index = self._find_boundary_index(
                 idx_boundary, phases, direction, atol
             )
-
             return boundary_index
 
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
+            print('Using point where flux is closest to 1...')
             if direction == "start":
                 return np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0][-1]
             return np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0][0]
