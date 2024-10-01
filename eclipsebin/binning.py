@@ -583,12 +583,28 @@ class EclipsingBinaryBinner:
             label="Primary Eclipse",
         )
         plt.vlines(
+            self.primary_eclipse,
+            ymin=ylims[0],
+            ymax=ylims[1],
+            linestyle="--",
+            color="green",
+            label="Primary Eclipse",
+        )
+        plt.vlines(
             self.get_eclipse_boundaries(primary=False, use_shifted_phases=True),
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
             color="blue",
             label="Secondary Eclipse",
+        )
+        plt.vlines(
+            self.secondary_eclipse,
+            ymin=ylims[0],
+            ymax=ylims[1],
+            linestyle="--",
+            color="pink",
+            label="Primary Eclipse",
         )
         plt.ylim(ylims)
         plt.xlim(0, 1)
