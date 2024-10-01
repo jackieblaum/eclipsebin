@@ -227,6 +227,7 @@ class EclipsingBinaryBinner:
         Returns:
             int: Index of the boundary point.
         """
+        print('Finding eclipse ingress/egress...')
         if use_shifted_phases:
             phases = self.data["shifted_phases"]
         else:
