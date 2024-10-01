@@ -240,6 +240,7 @@ class EclipsingBinaryBinner:
         min_flux_idx = np.where(phases == eclipse_min_phase)[0][0]
         min_flux = self.data["fluxes"][min_flux_idx]
         atol = self.get_atol(min_flux)
+        print(f"tolerance: {atol}")
 
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
