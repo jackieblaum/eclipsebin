@@ -254,8 +254,7 @@ class EclipsingBinaryBinner:
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
             print('Checking points where flux is closest to 1...')
-            if direction == "start":
-                idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
+            idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
         # Return the last or first index depending on direction
         boundary_phase = (
             max(phases[idx_boundary])
