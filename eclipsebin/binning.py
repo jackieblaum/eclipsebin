@@ -276,8 +276,6 @@ class EclipsingBinaryBinner:
             self.params["atol_primary"] = primary
         if secondary is not None:
             self.params["atol_secondary"] = secondary
-        self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
-        self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
         return 0
 
     def get_atol(self, min_flux):
