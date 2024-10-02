@@ -27,6 +27,10 @@ jobs:
         pip install pytest pytest-cov
         pip install .
 
+    - name: List repository root files (debug)
+      run: |
+        ls -al
+
     - name: Clear Pylint cache
       run: |
         rm -rf ~/.pylint.d
