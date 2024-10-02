@@ -251,10 +251,20 @@ class EclipsingBinaryBinner:
             # If no boundary found, use the closest point to 1.0 flux
             print('Checking points where flux is closest to 1...')
             idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
-            
+
         end_close_to_one = (direction=="end" and np.isclose(phases[idx_boundary[-1]], 1, atol=0.02))
         start_close_to_zero = (direction=="start" and np.isclose(phases[idx_boundary[0]], 1, atol=0.02))
-        if len(idx_boundary) > 100 or end_close_to_one or start_close_to_zero:
+
+        if end_close_to_one or start_close_to_zero:
+            print('Eclipse detected near the beginning/end of the phase. '
+                  'Binning uniformly to find eclipse ingress/egress...')
+            boundary_index = self._find_boundary_index(
+                np.full(idx_boundary.shape, True), phases, direction, atol
+            )
+            print(phases[boundary_index])
+            return boundary_index
+
+        if len(idx_boundary) > 100:
             print('Binning uniformly first to find eclipse ingress/egress...')
             boundary_index = self._find_boundary_index(
                 idx_boundary, phases, direction, atol
