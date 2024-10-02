@@ -8,13 +8,8 @@
 [![PyPI Version](https://img.shields.io/pypi/v/eclipsebin)](https://pypi.org/project/eclipsebin/)
 [![Coverage](https://codecov.io/gh/jackieblaum/eclipsebin/branch/main/graph/badge.svg)](https://codecov.io/gh/jackieblaum/eclipsebin)
 
-<!-- For GitHub -->
-<!--
-<img src="docs/images/binning_comparison.jpg" alt="Binned Light Curve" width="200">
--->
-
-<!-- For MkDocs (Read the Docs) -->
-<img src="images/binning_comparison.jpg" alt="Binned Light Curve">
+<img src="images/binning_comparison.jpg" alt="Binned Light Curve" onerror="this.style.display='none';">
+<img src="docs/images/binning_comparison.jpg" alt="Binned Light Curve" onerror="this.style.display='none';">
 
 ## Overview
 
@@ -87,12 +82,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 <!-- For GitHub -->
-<!--
-<img src="docs/images/nsf_logo.png" alt="NSF" width="200">
--->
+<img src="docs/images/nsf_logo.png" alt="NSF" width="200" onerror="this.style.display='none';">
 
 <!-- For MkDocs (Read the Docs) -->
-<img src="images/nsf_logo.png" alt="NSF" width="200">
+<img src="images/nsf_logo.png" alt="NSF" width="200" onerror="this.style.display='none';">
 
 
 This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 2206744 & DGE 2146752. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
