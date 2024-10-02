@@ -1,0 +1,20 @@
+site_name: eclipsebin
+site_description: eclipsebin Documentation
+theme:
+  name: readthedocs
+
+# Specify where your markdown files are
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Reference: api-reference.md
+
+# Custom URL to deploy
+site_url: https://eclipsebin.io/
+
+docs_dir: docs
+
+markdown_extensions:
+  - codehilite
+  - toc:
+      permalink: true
