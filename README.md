@@ -10,7 +10,7 @@
 
 ### Overview
 
-This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike **traditional uniform binning (middle panel)**, which can dilute the crucial details of eclipses, this **non-uniform binning method (right panel)** prioritizes the accurate representation of eclipse events.
+This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike **traditional uniform binning (middle panel)**, which can dilute the crucial details of eclipses, this **non-uniform binning method (right panel)** prioritizes the accurate representation of eclipse events. While the default parameters of this package are optimized for detached systems, the binning scheme can also be effectively applied to semi-detached and contact systems by adjusting these parameters.
 
 ### Key Features
 
@@ -35,6 +35,13 @@ Eclipses in binary star systems contain vital information about the system's pro
 
 - **Plotting**: The package also provides a function to plot the binned and unbinned light curves, marking the eclipse boundaries with vertical lines.
 
+### Light Curve Requirements
+
+- Minimum of 10 flux measurements with associated uncertainties, spanning both eclipses as well as out-of-eclipse regions.
+- Primary and secondary eclipses must be distinguishable by locating the minimum flux values.
+- Fluxes should ideally be normalized so that out-of-eclipse regions have a flux value close to 1.
+- Two eclipses must be displayed. In a later version, binning will be available for light curves with a single eclipse as well.
+  
 ### Getting Started
 
 To start using the package, install it via pip:
@@ -49,7 +56,7 @@ pip install eclipsebin
 import eclipsebin as ebin
 
 # Example usage
-binner = EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, fraction_in_eclipse=0.2)
+binner = ebin.EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, fraction_in_eclipse=0.5, atol_primary=0.001, atol_secondary=0.05)
 bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
 ```
 
