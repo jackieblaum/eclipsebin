@@ -228,7 +228,6 @@ class EclipsingBinaryBinner:
         Returns:
             int: Index of the boundary point.
         """
-        print('Finding eclipse ingress/egress...')
         if use_shifted_phases:
             phases = self.data["shifted_phases"]
         else:
@@ -241,7 +240,6 @@ class EclipsingBinaryBinner:
         min_flux_idx = np.where(phases == eclipse_min_phase)[0][0]
         min_flux = self.data["fluxes"][min_flux_idx]
         atol = self.get_atol(min_flux)
-        print(f"tolerance: {atol}")
 
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
@@ -249,15 +247,12 @@ class EclipsingBinaryBinner:
 
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
-            print('Checking points where flux is closest to 1...')
             idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
 
         if len(idx_boundary) > 100:
-            print('Binning uniformly first to find eclipse ingress/egress...')
             boundary_index = self._find_boundary_index(
                 idx_boundary, phases, direction, atol
             )
-            print(phases[boundary_index])
             return boundary_index
 
         # Return the last or first index depending on direction
