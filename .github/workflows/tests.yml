@@ -27,16 +27,18 @@ jobs:
         pip install pytest pytest-cov
         pip install .
 
-    - name: Clear cache
+    - name: Clear Pylint cache
       run: |
         rm -rf ~/.pylint.d
-        
-    - name: Lint with pylint using custom rcfile
+
+    - name: Lint with Pylint using custom rcfile
       run: |
+        set -e  # Ensure the workflow fails if any linting issues are found
         pylint --rcfile=.pylintrc eclipsebin
 
     - name: Run tests with pytest
       run: |
+        set -e  # Ensure the workflow fails if any tests fail
         pytest --cov
 
     - name: Upload results to Codecov
