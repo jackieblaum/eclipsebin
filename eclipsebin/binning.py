@@ -189,7 +189,7 @@ class EclipsingBinaryBinner:
     def _find_boundary_index(self, idx_boundary, phases, direction, atol):
         nbins = 100
         bins = np.linspace(
-            min(phases[idx_boundary]), max(phases[idx_boundary]), nbins + 1
+            min(phases[idx_boundary])-0.01, max(phases[idx_boundary])+0.01, nbins + 1
         )
         unbinned_data = pd.DataFrame(
             {
@@ -211,9 +211,6 @@ class EclipsingBinaryBinner:
         selected_bin = unbinned_data["phase_bin"].cat.categories[phase_bin_idx]
         mid = (selected_bin.left + selected_bin.right) / 2
         boundary_index = np.argmin(np.abs(phases - mid))
-        # bin_centers = [bins[i+1]/2 + bins[i]/2 for i in range(len(bins)-1)]
-        # plt.scatter(bin_centers, binned_data)
-        # plt.show()
         return boundary_index
 
     def _find_eclipse_boundary(
@@ -248,7 +245,6 @@ class EclipsingBinaryBinner:
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
         ]
-        print(phases[idx_boundary])
         if len(idx_boundary) > 100:
             print('Binning uniformly first to find eclipse ingress/egress...')
             boundary_index = self._find_boundary_index(
@@ -260,6 +256,7 @@ class EclipsingBinaryBinner:
             # If no boundary found, use the closest point to 1.0 flux
             print('Checking points where flux is closest to 1...')
             idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
+            print(phases[idx_boundary])
         # Return the last or first index depending on direction
         boundary_phase = (
             max(phases[idx_boundary])
