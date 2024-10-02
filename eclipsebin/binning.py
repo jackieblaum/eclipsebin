@@ -188,16 +188,16 @@ class EclipsingBinaryBinner:
 
     def _find_boundary_index(self, idx_boundary, phases, direction, atol):
         nbins = 100
-        bins = np.linspace(
-            min(phases[idx_boundary])-0.01, max(phases[idx_boundary])+0.01, nbins + 1
-        )
+        # bins = np.linspace(
+        #     min(phases[idx_boundary]), max(phases[idx_boundary]), nbins + 1
+        # )
         unbinned_data = pd.DataFrame(
             {
                 "phase": phases[idx_boundary],
                 "flux": self.data["fluxes"][idx_boundary],
             }
         )
-        unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=bins)
+        unbinned_data["phase_bin"] = pd.cut(unbinned_data["phase"], bins=nbins)
         binned_data = unbinned_data.groupby("phase_bin", observed=False)[
             "flux"
         ].median()
