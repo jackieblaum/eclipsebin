@@ -37,10 +37,13 @@ Eclipses in binary star systems contain vital information about the system's pro
 
 ### Light Curve Requirements
 
-- Minimum of 10 flux measurements with associated uncertainties, spanning both eclipses as well as out-of-eclipse regions.
-- Primary and secondary eclipses must be distinguishable by locating the minimum flux values.
+- At least 10 flux measurements with associated uncertainties, covering both eclipses and out-of-eclipse regions.
+- Primary and secondary eclipses must be distinguishable by identifying the minimum flux values.
+- The secondary eclipse minimum must occur at least 0.2 in phase away from the primary eclipse minimum. A future version will allow this value to be specified as a keyword argument.
+- The minimum flux value across the light curve, outside the 0.4 phase region around the primary eclipse, must belong to the secondary eclipse.
 - Fluxes should ideally be normalized so that out-of-eclipse regions have a flux value close to 1.
-- Two eclipses must be displayed. In a later version, binning will be available for light curves with a single eclipse as well.
+- Two eclipses must be present in the light curve. A future version will support binning for light curves with only one eclipse.
+- Optional: If the binning scheme is not producing the desired result, ensure that the eclipses do not cross the phase boundary.
   
 ### Getting Started
 
