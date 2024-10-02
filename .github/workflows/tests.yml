@@ -27,9 +27,9 @@ jobs:
         pip install pytest pytest-cov
         pip install .
         
-    - name: Lint with pylint
+    - name: Lint with pylint using custom rcfile
       run: |
-        pylint eclipsebin
+        pylint --rcfile=.pylintrc eclipsebin
 
     - name: Run tests with pytest
       run: |
