@@ -208,7 +208,8 @@ class EclipsingBinaryBinner:
             if direction == "start"
             else min(medians_closest_to_1)
         )
-        selected_bin = unbinned_data["phase_bin"].cat.categories[phase_bin_idx]
+        selected_bin = binned_data.index[phase_bin_idx]
+        # selected_bin = unbinned_data["phase_bin"].cat.categories[phase_bin_idx]
         mid = (selected_bin.left + selected_bin.right) / 2
         boundary_index = np.argmin(np.abs(phases - mid))
         return boundary_index
@@ -250,13 +251,13 @@ class EclipsingBinaryBinner:
             boundary_index = self._find_boundary_index(
                 idx_boundary, phases, direction, atol
             )
+            print(phases[boundary_index])
             return boundary_index
 
         if len(idx_boundary) == 0:
             # If no boundary found, use the closest point to 1.0 flux
             print('Checking points where flux is closest to 1...')
             idx_boundary = np.where(np.isclose(self.data["fluxes"], 1.0, atol=atol))[0]
-            print(phases[idx_boundary])
         # Return the last or first index depending on direction
         boundary_phase = (
             max(phases[idx_boundary])
