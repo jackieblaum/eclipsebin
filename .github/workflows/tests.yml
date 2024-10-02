@@ -26,6 +26,10 @@ jobs:
         pip install pylint
         pip install pytest pytest-cov
         pip install .
+
+    - name: Clear cache
+      run: |
+        rm -rf ~/.pylint.d
         
     - name: Lint with pylint using custom rcfile
       run: |
