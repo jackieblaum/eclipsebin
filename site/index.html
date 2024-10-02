@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
-        <link href="css/custom.css" rel="stylesheet" />
     
       <script>
         // Current page data
@@ -97,16 +96,23 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h2 id="binning-eclipsing-binary-star-light-curves">Binning Eclipsing Binary Star Light Curves<a class="headerlink" href="#binning-eclipsing-binary-star-light-curves" title="Permanent link">&para;</a></h2>
+                <h1 id="eclipsebin">eclipsebin:<a class="headerlink" href="#eclipsebin" title="Permanent link">&para;</a></h1>
+<p><span style="font-size: 20px;">A package for non-uniformly binning eclipsing binary star light curves.</span></p>
 <p><img alt="Build Status" src="https://github.com/jackieblaum/eclipsebin/actions/workflows/tests.yml/badge.svg" />
 <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" />
 <img alt="Python Versions" src="https://img.shields.io/pypi/pyversions/eclipsebin" />
 <a href="https://pypi.org/project/eclipsebin/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/eclipsebin" /></a>
 <a href="https://codecov.io/gh/jackieblaum/eclipsebin"><img alt="Coverage" src="https://codecov.io/gh/jackieblaum/eclipsebin/branch/main/graph/badge.svg" /></a></p>
-<p><img alt="Binned Light Curve" src="docs/images/binning_comparison.jpg" /></p>
-<h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
+<!-- For GitHub -->
+<!--
+<img src="docs/images/binning_comparison.jpg" alt="Binned Light Curve" width="200">
+-->
+
+<!-- For MkDocs (Read the Docs) -->
+<p><img src="images/binning_comparison.jpg" alt="Binned Light Curve"></p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike <strong>traditional uniform binning (middle panel)</strong>, which can dilute the crucial details of eclipses, this <strong>non-uniform binning method (right panel)</strong> prioritizes the accurate representation of eclipse events. While the default parameters of this package are optimized for detached systems, the binning scheme can also be effectively applied to semi-detached and contact systems by adjusting these parameters.</p>
-<h3 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h3>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
 <p><strong>Eclipse-Focused Binning</strong>: The binning algorithm identifies the eclipse phases and allocates up to half of the total bins to these critical periods. The remaining bins are distributed across the out-of-eclipse regions.</p>
@@ -118,9 +124,9 @@
 <p><strong>Enhanced Accuracy</strong>: By concentrating bins around the brief, narrow eclipse phases, the method improves the resolution of these events, which are essential for deriving accurate parameters of the binary system.</p>
 </li>
 </ul>
-<h3 id="why-use-this-binning-scheme">Why Use This Binning Scheme?<a class="headerlink" href="#why-use-this-binning-scheme" title="Permanent link">&para;</a></h3>
+<h2 id="why-use-this-binning-scheme">Why Use This Binning Scheme?<a class="headerlink" href="#why-use-this-binning-scheme" title="Permanent link">&para;</a></h2>
 <p>Eclipses in binary star systems contain vital information about the system's properties, such as the relative sizes, masses, and orbital parameters of the stars. Standard uniform binning can obscure these details, especially when the eclipse duration is short relative to the orbital period. This package mitigates that issue by adaptively placing more bins where they matter most—during the eclipses—thereby preserving the fidelity of the light curve and improving the subsequent analysis.</p>
-<h3 id="how-it-works">How it Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<h2 id="how-it-works">How it Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
 <p><strong>Eclipse Detection</strong>: The package first identifies the primary and secondary eclipse phases. The primary eclipse is located by finding the minimum flux, and the secondary eclipse is located by finding the minimum flux at least 0.2 phase units away from the primary eclipse. </p>
@@ -138,7 +144,7 @@
 <p><strong>Plotting</strong>: The package also provides a function to plot the binned and unbinned light curves, marking the eclipse boundaries with vertical lines.</p>
 </li>
 </ul>
-<h3 id="light-curve-requirements">Light Curve Requirements<a class="headerlink" href="#light-curve-requirements" title="Permanent link">&para;</a></h3>
+<h2 id="light-curve-requirements">Light Curve Requirements<a class="headerlink" href="#light-curve-requirements" title="Permanent link">&para;</a></h2>
 <ul>
 <li>At least 10 flux measurements with associated uncertainties, covering both eclipses and out-of-eclipse regions.</li>
 <li>Primary and secondary eclipses must be distinguishable by identifying the minimum flux values.</li>
@@ -148,12 +154,12 @@
 <li>Two eclipses must be present in the light curve. A future version will support binning for light curves with only one eclipse.</li>
 <li>Optional: If the binning scheme is not producing the desired result, ensure that the eclipses do not cross the phase boundary.</li>
 </ul>
-<h3 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <p>To start using the package, install it via pip:</p>
 <div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>eclipsebin
 </code></pre></div>
 
-<h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code>import<span class="w"> </span>eclipsebin<span class="w"> </span>as<span class="w"> </span>ebin
 
 <span class="c1"># Example usage</span>
@@ -161,16 +167,23 @@
 bin_centers,<span class="w"> </span>bin_means,<span class="w"> </span><span class="nv">bin_stds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>binner.bin_light_curve<span class="o">(</span><span class="nv">plot</span><span class="o">=</span>True<span class="o">)</span>
 </code></pre></div>
 
-<p>Refer to the <a href="https://github.com/jackieblaum/eclipsebin/blob/main/docs/usage.md">documentation</a> for more detailed usage instructions and examples.</p>
-<h3 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h3>
-<p>Contributions are welcome! Please refer to the <a href="CONTRIBUTING.md">Contributing Guide</a> for guidelines on how to help improve this project.</p>
-<h3 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h3>
-<p>This project is licensed under the MIT License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
-<h3 id="acknowledgments">Acknowledgments<a class="headerlink" href="#acknowledgments" title="Permanent link">&para;</a></h3>
 <!-- For GitHub -->
-<p><img src="docs/images/nsf_logo.png" alt="NSF" width="200" style="display: block;"></p>
+<!--
+<span >Refer to the [documentation](https://jackieblaum.github.io/eclipsebin/) for more detailed usage instructions and examples.</span>
+-->
+
+<h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
+<p>Contributions are welcome! Please refer to the <a href="CONTRIBUTING.md">Contributing Guide</a> for guidelines on how to help improve this project.</p>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>This project is licensed under the MIT License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
+<h2 id="acknowledgments">Acknowledgments<a class="headerlink" href="#acknowledgments" title="Permanent link">&para;</a></h2>
+<!-- For GitHub -->
+<!--
+<img src="docs/images/nsf_logo.png" alt="NSF" width="200">
+-->
+
 <!-- For MkDocs (Read the Docs) -->
-<p><img src="images/nsf_logo.png" alt="NSF" width="200" style="display: none;"></p>
+<p><img src="images/nsf_logo.png" alt="NSF" width="200"></p>
 <p>This material is based upon work supported by the National Science Foundation Graduate Research Fellowship Program under Grant No. 2206744 &amp; DGE 2146752. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.</p>
               
             </div>
@@ -220,5 +233,5 @@ bin_centers,<span class="w"> </span>bin_means,<span class="w"> </span><span clas
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2024-10-02 20:17:50.749458+00:00
+Build Date UTC : 2024-10-02 20:51:07.144449+00:00
 -->

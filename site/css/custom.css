@@ -1,9 +1,0 @@
-/* Hide the GitHub image on Read the Docs */
-img[src*="docs/images/"] {
-    display: none;
-  }
-  
-  /* Show the MkDocs image */
-  img[src*="images/"] {
-    display: block;
-  }

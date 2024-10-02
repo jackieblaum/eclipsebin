@@ -1,4 +1,6 @@
-## Binning Eclipsing Binary Star Light Curves
+# eclipsebin:
+<span style="font-size: 20px;">A package for non-uniformly binning eclipsing binary star light curves.</span>
+
 
 ![Build Status](https://github.com/jackieblaum/eclipsebin/actions/workflows/tests.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
@@ -14,11 +16,11 @@
 <!-- For MkDocs (Read the Docs) -->
 <img src="images/binning_comparison.jpg" alt="Binned Light Curve">
 
-### Overview
+## Overview
 
 This Python package provides a specialized binning scheme designed to more effectively capture the features of eclipsing binary star light curves. Unlike **traditional uniform binning (middle panel)**, which can dilute the crucial details of eclipses, this **non-uniform binning method (right panel)** prioritizes the accurate representation of eclipse events. While the default parameters of this package are optimized for detached systems, the binning scheme can also be effectively applied to semi-detached and contact systems by adjusting these parameters.
 
-### Key Features
+## Key Features
 
 - **Eclipse-Focused Binning**: The binning algorithm identifies the eclipse phases and allocates up to half of the total bins to these critical periods. The remaining bins are distributed across the out-of-eclipse regions.
   
@@ -26,11 +28,11 @@ This Python package provides a specialized binning scheme designed to more effec
   
 - **Enhanced Accuracy**: By concentrating bins around the brief, narrow eclipse phases, the method improves the resolution of these events, which are essential for deriving accurate parameters of the binary system.
 
-### Why Use This Binning Scheme?
+## Why Use This Binning Scheme?
 
 Eclipses in binary star systems contain vital information about the system's properties, such as the relative sizes, masses, and orbital parameters of the stars. Standard uniform binning can obscure these details, especially when the eclipse duration is short relative to the orbital period. This package mitigates that issue by adaptively placing more bins where they matter most—during the eclipses—thereby preserving the fidelity of the light curve and improving the subsequent analysis.
 
-### How it Works
+## How it Works
 - **Eclipse Detection**: The package first identifies the primary and secondary eclipse phases. The primary eclipse is located by finding the minimum flux, and the secondary eclipse is located by finding the minimum flux at least 0.2 phase units away from the primary eclipse. 
 
 - **Eclipse Boundaries**: The package defines the boundaries of the eclipses as the points where the flux returns to 1.0 flux units, or the closest point to 1.0 flux units if the flux does not return to 1.0.
@@ -41,7 +43,7 @@ Eclipses in binary star systems contain vital information about the system's pro
 
 - **Plotting**: The package also provides a function to plot the binned and unbinned light curves, marking the eclipse boundaries with vertical lines.
 
-### Light Curve Requirements
+## Light Curve Requirements
 
 - At least 10 flux measurements with associated uncertainties, covering both eclipses and out-of-eclipse regions.
 - Primary and secondary eclipses must be distinguishable by identifying the minimum flux values.
@@ -51,7 +53,7 @@ Eclipses in binary star systems contain vital information about the system's pro
 - Two eclipses must be present in the light curve. A future version will support binning for light curves with only one eclipse.
 - Optional: If the binning scheme is not producing the desired result, ensure that the eclipses do not cross the phase boundary.
   
-### Getting Started
+## Getting Started
 
 To start using the package, install it via pip:
 
@@ -59,7 +61,7 @@ To start using the package, install it via pip:
 pip install eclipsebin
 ```
 
-### Usage
+## Usage
 
 ```bash
 import eclipsebin as ebin
@@ -69,17 +71,20 @@ binner = ebin.EclipsingBinaryBinner(phases, fluxes, fluxerrs, nbins=200, fractio
 bin_centers, bin_means, bin_stds = binner.bin_light_curve(plot=True)
 ```
 
-Refer to the [documentation](https://github.com/jackieblaum/eclipsebin/blob/main/docs/usage.md) for more detailed usage instructions and examples.
+<!-- For GitHub -->
+<!--
+<span >Refer to the [documentation](https://jackieblaum.github.io/eclipsebin/) for more detailed usage instructions and examples.</span>
+-->
 
-### Contributing
+## Contributing
 
 Contributions are welcome! Please refer to the [Contributing Guide](CONTRIBUTING.md) for guidelines on how to help improve this project.
 
-### License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Acknowledgments
+## Acknowledgments
 
 <!-- For GitHub -->
 <!--
