@@ -435,10 +435,6 @@ def helper_shift_bins(phases, fluxes, flux_errors, nbins, fraction_in_eclipse):
     assert np.isclose(shifted_bins[0], 0)
     assert np.all(shifted_bins <= 1) and np.all(shifted_bins >= 0)
     assert len(shifted_bins) == len(all_bins) + 1
-    # primary_diff = np.array(binner.get_eclipse_boundaries(primary=True)) - np.array(binner.get_eclipse_boundaries(primary=True, use_shifted_phases=True))
-    # secondary_diff = np.array(binner.get_eclipse_boundaries(primary=False)) - np.array(binner.get_eclipse_boundaries(primary=False, use_shifted_phases=True))
-    # assert np.isclose(primary_diff[0], secondary_diff[0])
-    # assert np.isclose(primary_diff[1], secondary_diff[1])
 
 
 def helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse):
