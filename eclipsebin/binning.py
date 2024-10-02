@@ -248,6 +248,7 @@ class EclipsingBinaryBinner:
         idx_boundary = np.where(mask & np.isclose(self.data["fluxes"], 1.0, atol=atol))[
             0
         ]
+        print(idx_boundary)
         if len(idx_boundary) > 100:
             print('Binning uniformly first to find eclipse ingress/egress...')
             boundary_index = self._find_boundary_index(
