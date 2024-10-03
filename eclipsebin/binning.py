@@ -26,8 +26,7 @@ class EclipsingBinaryBinner:
         secondary_eclipse (tuple): Start and end phase values of the secondary eclipse.
     """
 
-    #pylint: disable-msg=too-many-arguments
-    def __init__(
+    def __init__( # pylint: disable=too-many-arguments
         self,
         phases,
         fluxes,
@@ -84,7 +83,6 @@ class EclipsingBinaryBinner:
         # Determine start and end of each eclipse
         self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
         self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
-        #pylint: enable-msg=too-many-arguments
 
     def find_minimum_flux_phase(self, use_shifted_phases=False):
         """
