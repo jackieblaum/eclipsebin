@@ -1,3 +1,4 @@
+# pylint: disable=too-many-arguments
 """
 This module contains the EclipsingBinaryBinner class, which performs non-uniform binning
 of eclipsing binary star light curves.
@@ -26,7 +27,7 @@ class EclipsingBinaryBinner:
         secondary_eclipse (tuple): Start and end phase values of the secondary eclipse.
     """
 
-    def __init__( #pylint: disable=too-many-arguments
+    def __init__(
         self,
         phases,
         fluxes,
