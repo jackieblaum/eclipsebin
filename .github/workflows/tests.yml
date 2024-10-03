@@ -38,7 +38,7 @@ jobs:
     - name: Lint with Pylint using custom rcfile
       run: |
         set -e  # Ensure the workflow fails if any linting issues are found
-        pylint --rcfile=~/.pylintrc eclipsebin
+        pylint --rcfile=.pylintrc eclipsebin
 
     - name: Run tests with pytest
       run: |
