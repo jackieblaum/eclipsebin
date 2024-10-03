@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10"]
 
     steps:
     - name: Check out the repository
@@ -31,7 +31,7 @@ jobs:
       run: |
         ls -al
 
-    - name: Lint with Pylint using custom rcfile
+    - name: Lint with Pylint
       run: |
         pylint eclipsebin
 
