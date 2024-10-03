@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="eclipsebin",
-    version="0.2.0",
+    version="0.3.2",
     author="Jackie Blaum",
     author_email="jackie.blaum@gmail.com",
     description="A specialized binning scheme for eclipsing binary star light curves",
@@ -19,7 +19,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.9',
+    python_requires=">=3.9",
     install_requires=[
         "numpy",
         "pandas",
