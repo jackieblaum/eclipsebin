@@ -97,7 +97,7 @@ def test_unwrapped_light_curves(
     nbins,
 ):
     """
-    Call tests on the light curves in which neither the primary nor 
+    Call tests on the light curves in which neither the primary nor
     secondary eclipse crosses the 1-0 phase boundary.
     """
     unwrapped_light_curves = [
@@ -107,8 +107,12 @@ def test_unwrapped_light_curves(
     ]
     for phases, fluxes, flux_errors in unwrapped_light_curves:
         helper_eclipse_detection(
-            phases, fluxes, flux_errors, nbins, fraction_in_eclipse,
-            wrapped={"primary": False, "secondary": False}
+            phases,
+            fluxes,
+            flux_errors,
+            nbins,
+            fraction_in_eclipse,
+            wrapped={"primary": False, "secondary": False},
         )
         helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
         helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
@@ -207,6 +211,41 @@ def test_initialization_invalid_data(unwrapped_light_curve):
         EclipsingBinaryBinner(phases[:50], fluxes[:50], flux_errors[:50], nbins=60)
 
 
+@pytest.mark.parametrize("fraction_in_eclipse", [0.1, 0.2, 0.3, 0.4, 0.5])
+@pytest.mark.parametrize("nbins", [50, 100, 200])
+def test_get_atol(
+    unwrapped_light_curve,
+    wrapped_light_curve,
+    asas_sn_unwrapped_light_curve,
+    tess_unwrapped_light_curve,
+    nbins,
+    fraction_in_eclipse,
+):
+    """
+    Test the get_atol() method of EclipsingBinaryBinner.
+    """
+    light_curves = [
+        unwrapped_light_curve,
+        wrapped_light_curve,
+        asas_sn_unwrapped_light_curve,
+        tess_unwrapped_light_curve,
+    ]
+    atols = [[0.0001, 0.0001], [0.0001, 0.0001], [0.01, 0.01], [0.01, 0.005]]
+    for light_curve, atol in zip(light_curves, atols):
+        phases, fluxes, flux_errors = light_curve
+        binner = EclipsingBinaryBinner(
+            phases,
+            fluxes,
+            flux_errors,
+            nbins=nbins,
+            fraction_in_eclipse=fraction_in_eclipse,
+        )
+        binner.set_atol(primary=atol[0], secondary=atol[1])
+        assert binner.params["atol_primary"] == atol[0]
+        assert binner.params["atol_secondary"] == atol[1]
+        assert binner.get_atol(min(binner.data["fluxes"])) == atol[0]
+
+
 def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse):
     """
     Test the find_minimum_flux method of EclipsingBinaryBinner.
@@ -218,20 +257,22 @@ def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_e
         nbins=nbins,
         fraction_in_eclipse=fraction_in_eclipse,
     )
-    primary_minimum_phase = binner.find_minimum_flux()
+    primary_minimum_phase = binner.find_minimum_flux_phase()
     assert 0 <= primary_minimum_phase <= 1.0
 
-    secondary_minimum_phase = binner.find_secondary_minimum()
+    secondary_minimum_phase = binner.find_secondary_minimum_phase()
     assert 0 <= secondary_minimum_phase <= 1.0
 
     bins = binner.find_bin_edges()
     _ = binner.shift_bin_edges(bins)
 
-    primary_minimum_shifted_phase = binner.find_minimum_flux(use_shifted_phases=True)
+    primary_minimum_shifted_phase = binner.find_minimum_flux_phase(
+        use_shifted_phases=True
+    )
     assert primary_minimum_shifted_phase >= primary_minimum_phase
     assert 0 <= primary_minimum_shifted_phase <= 1.0
 
-    secondary_minimum_shifted_phase = binner.find_secondary_minimum(
+    secondary_minimum_shifted_phase = binner.find_secondary_minimum_phase(
         use_shifted_phases=True
     )
     assert secondary_minimum_shifted_phase >= secondary_minimum_phase
@@ -239,12 +280,7 @@ def helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_e
 
 
 def helper_eclipse_detection(
-    phases,
-    fluxes,
-    flux_errors,
-    nbins,
-    fraction_in_eclipse,
-    wrapped
+    phases, fluxes, flux_errors, nbins, fraction_in_eclipse, wrapped
 ):
     """
     Test the eclipse detection capabilities of EclipsingBinaryBinner on a wrapped light curve.
@@ -260,7 +296,7 @@ def helper_eclipse_detection(
     bins = binner.find_bin_edges()
     _ = binner.shift_bin_edges(bins)
     for shifted in [False, True]:
-        primary_min = binner.find_minimum_flux(use_shifted_phases=shifted)
+        primary_min = binner.find_minimum_flux_phase(use_shifted_phases=shifted)
         primary_eclipse = binner.get_eclipse_boundaries(
             primary=True, use_shifted_phases=shifted
         )
@@ -270,7 +306,7 @@ def helper_eclipse_detection(
         if not wrapped["primary"]:
             assert primary_eclipse[0] < primary_min < primary_eclipse[1]
 
-        secondary_min = binner.find_secondary_minimum(use_shifted_phases=shifted)
+        secondary_min = binner.find_secondary_minimum_phase(use_shifted_phases=shifted)
         secondary_eclipse = binner.get_eclipse_boundaries(
             primary=False, use_shifted_phases=shifted
         )
