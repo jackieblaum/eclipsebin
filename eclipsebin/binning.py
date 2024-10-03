@@ -26,7 +26,7 @@ class EclipsingBinaryBinner:
         secondary_eclipse (tuple): Start and end phase values of the secondary eclipse.
     """
 
-    def __init__( # pylint: disable=too-many-arguments
+    def __init__( #pylint: disable=too-many-arguments
         self,
         phases,
         fluxes,
