@@ -7,6 +7,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Binning Scheme: binning-scheme.md
   - API Reference: api-reference.md
 
 # Custom URL to deploy
