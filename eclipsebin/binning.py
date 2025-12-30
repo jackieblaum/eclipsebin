@@ -417,7 +417,8 @@ class EclipsingBinaryBinner:
             if len(flux_errors_in_bin) != bincounts[i]:
                 raise ValueError("Incorrect bin masking.")
             # Calculate the propagated error for the bin
-            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2))
+            n = bincounts[i]
+            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
 
         if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
             if self.params["fraction_in_eclipse"] > 0.1:
