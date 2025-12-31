@@ -382,16 +382,7 @@ class EclipsingBinaryBinner:
             (self.params["nbins"] * self.params["fraction_in_eclipse"]) / 2
         )
         start_idx, end_idx = np.searchsorted(self.data["phases"], self.primary_eclipse)
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
         bins_in_primary = min(bins_in_primary, len(np.unique(eclipse_phases)))
 
         bins_in_secondary = int(
@@ -401,17 +392,9 @@ class EclipsingBinaryBinner:
         start_idx, end_idx = np.searchsorted(
             self.data["phases"], self.secondary_eclipse
         )
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
         bins_in_secondary = min(bins_in_secondary, len(np.unique(eclipse_phases)))
+
         return bins_in_primary, bins_in_secondary
 
     def find_bin_edges(self):
@@ -519,16 +502,10 @@ class EclipsingBinaryBinner:
             np.ndarray: Array of bin edges within the eclipse.
         """
         start_idx, end_idx = np.searchsorted(self.data["phases"], eclipse_boundaries)
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+
+        # Since phases are now unwrapped, we can directly slice
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
+
         # Ensure there are enough unique phases for the number of bins requested
         if len(np.unique(eclipse_phases)) < bins_in_eclipse:
             raise ValueError(
@@ -536,7 +513,7 @@ class EclipsingBinaryBinner:
             )
 
         bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-        return np.array([interval.right for interval in np.unique(bins)]) % 1
+        return np.array([interval.right for interval in np.unique(bins)])
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
@@ -556,47 +533,50 @@ class EclipsingBinaryBinner:
             self.params["nbins"] - bins_in_primary - bins_in_secondary - bins_in_ooe1
         )
 
-        # Calculate bin edges between end of secondary eclipse and start of primary eclipse
+        # OOE1: between end of secondary eclipse and start of primary eclipse
         end_idx_secondary_eclipse = np.searchsorted(
             self.data["phases"], self.secondary_eclipse[1]
         )
         start_idx_primary_eclipse = np.searchsorted(
             self.data["phases"], self.primary_eclipse[0]
         )
-        ooe1_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][end_idx_secondary_eclipse:],
-                    self.data["phases"][: start_idx_primary_eclipse + 1] + 1,
-                )
-            )
-            if end_idx_secondary_eclipse > start_idx_primary_eclipse
-            else self.data["phases"][
+
+        # Eclipses are unwrapped, but OOE regions may still wrap
+        if end_idx_secondary_eclipse <= start_idx_primary_eclipse:
+            # No wrapping in OOE1
+            ooe1_phases = self.data["phases"][
                 end_idx_secondary_eclipse : start_idx_primary_eclipse + 1
             ]
-        )
+        else:
+            # OOE1 wraps around
+            ooe1_phases = np.concatenate((
+                self.data["phases"][end_idx_secondary_eclipse:],
+                self.data["phases"][: start_idx_primary_eclipse + 1] + 1
+            ))
+
         ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
         ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
 
-        # Calculate bin edges between end of primary eclipse and start of secondary eclipse
+        # OOE2: between end of primary eclipse and start of secondary eclipse
         end_idx_primary_eclipse = np.searchsorted(
             self.data["phases"], self.primary_eclipse[1]
         )
         start_idx_secondary_eclipse = np.searchsorted(
             self.data["phases"], self.secondary_eclipse[0]
         )
-        ooe2_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][end_idx_primary_eclipse:],
-                    self.data["phases"][: start_idx_secondary_eclipse + 1] + 1,
-                )
-            )
-            if end_idx_primary_eclipse > start_idx_secondary_eclipse
-            else self.data["phases"][
+
+        if end_idx_primary_eclipse <= start_idx_secondary_eclipse:
+            # No wrapping in OOE2
+            ooe2_phases = self.data["phases"][
                 end_idx_primary_eclipse : start_idx_secondary_eclipse + 1
             ]
-        )
+        else:
+            # OOE2 wraps around
+            ooe2_phases = np.concatenate((
+                self.data["phases"][end_idx_primary_eclipse:],
+                self.data["phases"][: start_idx_secondary_eclipse + 1] + 1
+            ))
+
         ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2)
         ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)]) % 1
 
