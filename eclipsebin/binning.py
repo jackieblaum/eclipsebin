@@ -385,6 +385,8 @@ class EclipsingBinaryBinner:
                 (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
             )
         )
+
+        # Check for duplicate edges
         if len(np.unique(all_bins)) != len(all_bins):
             if self.params["fraction_in_eclipse"] > 0.1:
                 new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
@@ -398,6 +400,24 @@ class EclipsingBinaryBinner:
                 "There may not be enough data to bin these eclipses. Try "
                 "changing the atol values for detecting eclipse boundaries with set_atol()."
             )
+
+        # Check if we have significantly different number of bins than requested
+        # Allow small differences (< 2%) due to duplicates='drop' rounding
+        bin_count_diff = abs(len(all_bins) - self.params["nbins"])
+        if bin_count_diff > max(1, 0.02 * self.params["nbins"]):
+            if self.params["fraction_in_eclipse"] > 0.1:
+                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
+                print(
+                    f"Requested {self.params['nbins']} bins but got {len(all_bins)} "
+                    f"due to data distribution; trying fraction_in_eclipse={new_fraction_in_eclipse}"
+                )
+                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                return self.find_bin_edges()
+            raise ValueError(
+                "Cannot create the requested number of bins. Try "
+                "reducing nbins or changing the atol values for detecting eclipse boundaries."
+            )
+
         return all_bins
 
     def _rewrap_to_original_phase(self, phases_array):
@@ -431,6 +451,9 @@ class EclipsingBinaryBinner:
         # Add phase 0 and 1 as boundaries for binned_statistic
         bin_edges = np.concatenate([[0], all_bins, [1]])
 
+        # Ensure no duplicate edges (can occur at region boundaries even with duplicates='drop')
+        bin_edges = np.unique(bin_edges)
+
         bin_means, _, bin_number = stats.binned_statistic(
             self.data["phases"],
             self.data["fluxes"],
@@ -457,6 +480,7 @@ class EclipsingBinaryBinner:
                 bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
 
         if np.any(bincounts <= 0) or np.any(bin_errors <= 0):
+            # Only retry if we have room to reduce fraction_in_eclipse
             if self.params["fraction_in_eclipse"] > 0.1:
                 new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
                 print(
@@ -465,7 +489,11 @@ class EclipsingBinaryBinner:
                 )
                 self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
                 return self.calculate_bins(return_in_original_phase=return_in_original_phase)
-            raise ValueError("Not enough data to bin these eclipses.")
+            # If we can't reduce further, this combination of parameters is invalid
+            raise ValueError(
+                "Not enough data to bin these eclipses with the requested parameters. "
+                "Try reducing nbins or increasing fraction_in_eclipse."
+            )
 
         # Rewrap to original phase space if requested
         if return_in_original_phase:
@@ -496,7 +524,7 @@ class EclipsingBinaryBinner:
                 "Not enough unique phase values to create the requested number of bins."
             )
 
-        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
+        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates='drop')
         return np.array([interval.right for interval in np.unique(bins)])
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
@@ -538,7 +566,7 @@ class EclipsingBinaryBinner:
                 self.data["phases"][: start_idx_primary_eclipse + 1] + 1
             ))
 
-        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
+        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates='drop')
         ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
 
         # OOE2: between end of primary eclipse and start of secondary eclipse
@@ -561,7 +589,7 @@ class EclipsingBinaryBinner:
                 self.data["phases"][: start_idx_secondary_eclipse + 1] + 1
             ))
 
-        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2)
+        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates='drop')
         ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)]) % 1
 
         return ooe1_edges, ooe2_edges
