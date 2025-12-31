@@ -653,8 +653,9 @@ class EclipsingBinaryBinner:
 
         bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates="drop")
         # Extract unique bin intervals from the categorical
-        # Use categories to get the interval objects
-        unique_intervals = bins.cat.categories
+        # pd.qcut may return a Series or Categorical, so convert to Series to ensure .cat accessor
+        bins_series = pd.Series(bins) if not isinstance(bins, pd.Series) else bins
+        unique_intervals = bins_series.cat.categories
         return np.array([interval.right for interval in unique_intervals]) % 1
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
@@ -696,7 +697,13 @@ class EclipsingBinaryBinner:
         )
         if bins_in_ooe1 > 0:
             ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates="drop")
-            unique_intervals = ooe1_bins.cat.categories
+            # pd.qcut may return a Series or Categorical, so convert to Series to ensure .cat accessor
+            ooe1_bins_series = (
+                pd.Series(ooe1_bins)
+                if not isinstance(ooe1_bins, pd.Series)
+                else ooe1_bins
+            )
+            unique_intervals = ooe1_bins_series.cat.categories
             ooe1_edges = np.array([interval.right for interval in unique_intervals]) % 1
         else:
             ooe1_edges = np.array([])
@@ -722,7 +729,13 @@ class EclipsingBinaryBinner:
         )
         if bins_in_ooe2 > 0:
             ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates="drop")
-            unique_intervals = ooe2_bins.cat.categories
+            # pd.qcut may return a Series or Categorical, so convert to Series to ensure .cat accessor
+            ooe2_bins_series = (
+                pd.Series(ooe2_bins)
+                if not isinstance(ooe2_bins, pd.Series)
+                else ooe2_bins
+            )
+            unique_intervals = ooe2_bins_series.cat.categories
             ooe2_edges = np.array([interval.right for interval in unique_intervals]) % 1
         else:
             ooe2_edges = np.array([])
