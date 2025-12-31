@@ -77,13 +77,23 @@ class EclipsingBinaryBinner:
 
         self.set_atol(primary=atol_primary, secondary=atol_secondary)
 
-        # Identify primary and secondary eclipse minima
+        # Identify primary and secondary eclipse minima (in original phase space)
         self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
         self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
 
-        # Determine start and end of each eclipse
+        # Determine start and end of each eclipse (in original phase space)
         self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
         self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+
+        # Calculate shift needed to unwrap any wrapped eclipses
+        self._phase_shift = self._calculate_unwrap_shift()
+
+        # Apply unwrapping if needed
+        if self._phase_shift != 0.0:
+            self._unwrap_phases()
+            # Recalculate eclipse boundaries in unwrapped space
+            self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
+            self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
 
     def find_minimum_flux_phase(self, use_shifted_phases=False):
         """
@@ -177,21 +187,39 @@ class EclipsingBinaryBinner:
         if not (primary_wrapped or secondary_wrapped):
             return 0.0
 
-        # Shift so the wrapped eclipse is centered away from boundaries
-        # Use midpoint of the eclipse that's NOT wrapped as reference
+        # Calculate shift to unwrap the wrapped eclipse
+        # Shift to place the wrapped eclipse midpoint away from the 0/1 boundary
+        # while keeping the unwrapped eclipse unwrapped
         if primary_wrapped and not secondary_wrapped:
-            # Shift so primary is unwrapped - place it opposite secondary
-            secondary_mid = (self.secondary_eclipse[0] + self.secondary_eclipse[1]) / 2
-            shift = 0.5 - secondary_mid
+            # Shift so primary unwraps but secondary stays unwrapped
+            # Place the shift point between secondary end and primary start
+            shift = 1.0 - self.primary_eclipse[0] + 0.05  # Small offset to move primary start away from 0
         elif secondary_wrapped and not primary_wrapped:
-            # Shift so secondary is unwrapped - place it opposite primary
-            primary_mid = (self.primary_eclipse[0] + self.primary_eclipse[1]) / 2
-            shift = 0.5 - primary_mid
+            # Shift so secondary unwraps but primary stays unwrapped
+            # Place the shift point between primary end and secondary start
+            shift = 1.0 - self.secondary_eclipse[0] + 0.05  # Small offset to move secondary start away from 0
         else:
-            # Both wrapped (rare) - shift by 0.5
+            # Both wrapped (rare) - use 0.5
             shift = 0.5
 
         return shift % 1.0
+
+    def _unwrap_phases(self):
+        """
+        Unwrap phases by applying the calculated shift.
+        This ensures no eclipse crosses the 0/1 boundary.
+        """
+        self.data["phases"] = (self.data["phases"] + self._phase_shift) % 1.0
+        # Re-sort after shifting
+        sort_idx = np.argsort(self.data["phases"])
+        self.data["phases"] = self.data["phases"][sort_idx]
+        self.data["fluxes"] = self.data["fluxes"][sort_idx]
+        self.data["flux_errors"] = self.data["flux_errors"][sort_idx]
+
+        # Recalculate eclipse minima in unwrapped space
+        # (they should be at the same flux values, just different phases)
+        self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
 
     def get_eclipse_boundaries(self, primary=True, use_shifted_phases=False):
         """
