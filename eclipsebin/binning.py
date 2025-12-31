@@ -435,40 +435,52 @@ class EclipsingBinaryBinner:
             )
         return all_bins
 
-    def shift_bin_edges(self, bins):
+    def _rewrap_to_original_phase(self, phases_array):
         """
-        Shift the bins so that the rightmost bin edge is set to be 1.
-        """
-        rightmost_edge = bins[-1]
-        shifted_bins = bins + (1 - rightmost_edge)
-        self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
-        shifted_bins = np.concatenate([[0], shifted_bins])
-        return shifted_bins
+        Rewrap phases back to original phase space before unwrapping.
 
-    def calculate_bins(self):
+        Args:
+            phases_array (np.ndarray): Array of phases in unwrapped space
+
+        Returns:
+            np.ndarray: Phases shifted back to original space
+        """
+        if self._phase_shift == 0.0:
+            return phases_array
+        return (phases_array - self._phase_shift) % 1.0
+
+    def calculate_bins(self, return_in_original_phase=True):
         """
         Calculates the bin centers, means, and standard deviations for the binned light curve.
+
+        Args:
+            return_in_original_phase (bool): If True, return results in original phase space
+                (before unwrapping). If False, return in unwrapped space. Defaults to True.
 
         Returns:
             tuple: Arrays of bin centers, bin means, bin standard deviations, bin numbers,
                 and bin edges.
         """
         all_bins = self.find_bin_edges()
-        shifted_bins = self.shift_bin_edges(all_bins)
-        bin_means, bin_edges, bin_number = stats.binned_statistic(
-            self.data["shifted_phases"],
+
+        # Add phase 0 and 1 as boundaries for binned_statistic
+        bin_edges = np.concatenate([[0], all_bins, [1]])
+
+        bin_means, _, bin_number = stats.binned_statistic(
+            self.data["phases"],
             self.data["fluxes"],
             statistic="mean",
-            bins=shifted_bins,
+            bins=bin_edges,
         )
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_errors = np.zeros(len(bin_means))
+
         # Calculate the propagated errors for each bin
-        bincounts = np.bincount(bin_number)[1:]
+        bincounts = np.bincount(bin_number, minlength=len(bin_edges))[1:]
         for i in range(len(bin_means)):
             # Get the indices of the data points in this bin
-            bin_mask = (self.data["shifted_phases"] >= shifted_bins[i]) & (
-                self.data["shifted_phases"] < shifted_bins[i + 1]
+            bin_mask = (self.data["phases"] >= bin_edges[i]) & (
+                self.data["phases"] < bin_edges[i + 1]
             )
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
@@ -476,9 +488,10 @@ class EclipsingBinaryBinner:
                 raise ValueError("Incorrect bin masking.")
             # Calculate the propagated error for the bin
             n = bincounts[i]
-            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
+            if n > 0:
+                bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
 
-        if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
+        if np.any(bincounts <= 0) or np.any(bin_errors <= 0):
             if self.params["fraction_in_eclipse"] > 0.1:
                 new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
                 print(
@@ -486,8 +499,14 @@ class EclipsingBinaryBinner:
                     f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
                 )
                 self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
-                return self.calculate_bins()
+                return self.calculate_bins(return_in_original_phase=return_in_original_phase)
             raise ValueError("Not enough data to bin these eclipses.")
+
+        # Rewrap to original phase space if requested
+        if return_in_original_phase:
+            bin_centers = self._rewrap_to_original_phase(bin_centers)
+            bin_edges = self._rewrap_to_original_phase(bin_edges)
+
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
     def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
