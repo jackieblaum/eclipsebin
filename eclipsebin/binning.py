@@ -84,6 +84,11 @@ class EclipsingBinaryBinner:
         # Determine start and end of each eclipse
         self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
         self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+        
+        # Store original phases for boundary shift handling
+        self.original_phases = self.data["phases"].copy()
+        self.boundary_shift = 0.0
+        self.bin_edge_shift = 0.0  # Track the shift applied by shift_bin_edges
 
     def find_minimum_flux_phase(self, use_shifted_phases=False):
         """
@@ -377,59 +382,225 @@ class EclipsingBinaryBinner:
             )
         return all_bins
 
+    def detect_boundary_crossing(self, threshold=0.2):
+        """
+        Detects if an eclipse minimum is within threshold phase units of the phase boundary (0.0 or 1.0).
+        
+        Args:
+            threshold (float): Phase distance threshold from boundary. Defaults to 0.2.
+            
+        Returns:
+            bool: True if an eclipse is near the boundary, False otherwise.
+        """
+        # Check if primary eclipse is near 0.0 or 1.0
+        primary_near_zero = self.primary_eclipse_min_phase < threshold
+        primary_near_one = self.primary_eclipse_min_phase > (1.0 - threshold)
+        
+        # Check if secondary eclipse is near 0.0 or 1.0
+        secondary_near_zero = self.secondary_eclipse_min_phase < threshold
+        secondary_near_one = self.secondary_eclipse_min_phase > (1.0 - threshold)
+        
+        return primary_near_zero or primary_near_one or secondary_near_zero or secondary_near_one
+    
+    def calculate_boundary_shift(self, threshold=0.2):
+        """
+        Calculates the phase shift needed to move eclipses away from the phase boundary.
+        
+        Args:
+            threshold (float): Phase distance threshold from boundary. Defaults to 0.2.
+            
+        Returns:
+            float: Phase shift amount (will be applied as (phases + shift) % 1).
+        """
+        # Find which eclipse is closest to a boundary
+        min_distance_to_boundary = 1.0
+        eclipse_to_shift = None
+        shift_direction = None
+        
+        # Check primary eclipse
+        dist_to_zero = self.primary_eclipse_min_phase
+        dist_to_one = 1.0 - self.primary_eclipse_min_phase
+        
+        if dist_to_zero < threshold and dist_to_zero < min_distance_to_boundary:
+            min_distance_to_boundary = dist_to_zero
+            eclipse_to_shift = "primary"
+            shift_direction = "away_from_zero"
+        elif dist_to_one < threshold and dist_to_one < min_distance_to_boundary:
+            min_distance_to_boundary = dist_to_one
+            eclipse_to_shift = "primary"
+            shift_direction = "away_from_one"
+        
+        # Check secondary eclipse
+        dist_to_zero_sec = self.secondary_eclipse_min_phase
+        dist_to_one_sec = 1.0 - self.secondary_eclipse_min_phase
+        
+        if dist_to_zero_sec < threshold and dist_to_zero_sec < min_distance_to_boundary:
+            min_distance_to_boundary = dist_to_zero_sec
+            eclipse_to_shift = "secondary"
+            shift_direction = "away_from_zero"
+        elif dist_to_one_sec < threshold and dist_to_one_sec < min_distance_to_boundary:
+            min_distance_to_boundary = dist_to_one_sec
+            eclipse_to_shift = "secondary"
+            shift_direction = "away_from_one"
+        
+        # Calculate shift to move the eclipse to around phase 0.5 (middle of phase space)
+        if eclipse_to_shift == "primary":
+            target_phase = 0.5
+            current_phase = self.primary_eclipse_min_phase
+        else:
+            target_phase = 0.5
+            current_phase = self.secondary_eclipse_min_phase
+        
+        # Calculate shift needed
+        shift = (target_phase - current_phase) % 1.0
+        # Ensure shift is positive and moves away from boundary
+        if shift > 0.5:
+            shift = shift - 1.0
+        
+        return shift
+    
+    def apply_boundary_shift(self, shift):
+        """
+        Applies a phase shift to move eclipses away from boundaries.
+        
+        Args:
+            shift (float): Phase shift amount to apply.
+        """
+        self.boundary_shift = shift
+        self.data["phases"] = (self.original_phases + shift) % 1.0
+        # Re-sort phases after shifting
+        sort_idx = np.argsort(self.data["phases"])
+        self.data["phases"] = self.data["phases"][sort_idx]
+        self.data["fluxes"] = self.data["fluxes"][sort_idx]
+        self.data["flux_errors"] = self.data["flux_errors"][sort_idx]
+        
+        # Recalculate eclipse minima and boundaries with shifted phases
+        self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
+        self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
+        self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+    
+    def restore_original_phases(self):
+        """
+        Restores the original phases after boundary shifting.
+        """
+        self.data["phases"] = self.original_phases.copy()
+        # Re-sort phases
+        sort_idx = np.argsort(self.data["phases"])
+        self.data["phases"] = self.data["phases"][sort_idx]
+        self.data["fluxes"] = self.data["fluxes"][sort_idx]
+        self.data["flux_errors"] = self.data["flux_errors"][sort_idx]
+        
+        # Restore original eclipse minima and boundaries
+        self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
+        self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
+        self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+        self.boundary_shift = 0.0
+
     def shift_bin_edges(self, bins):
         """
         Shift the bins so that the rightmost bin edge is set to be 1.
         """
         rightmost_edge = bins[-1]
-        shifted_bins = bins + (1 - rightmost_edge)
-        self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
+        self.bin_edge_shift = 1 - rightmost_edge
+        shifted_bins = bins + self.bin_edge_shift
+        self.data["shifted_phases"] = (self.data["phases"] + self.bin_edge_shift) % 1
         shifted_bins = np.concatenate([[0], shifted_bins])
         return shifted_bins
 
-    def calculate_bins(self):
+    def calculate_bins(self, boundary_threshold=0.2):
         """
         Calculates the bin centers, means, and standard deviations for the binned light curve.
+        
+        If an eclipse is detected near the phase boundary (within boundary_threshold),
+        phases are shifted to avoid the boundary during binning, then shifted back.
+
+        Args:
+            boundary_threshold (float): Phase distance threshold from boundary for detection.
+                Defaults to 0.2.
 
         Returns:
             tuple: Arrays of bin centers, bin means, bin standard deviations, bin numbers,
                 and bin edges.
         """
-        all_bins = self.find_bin_edges()
-        shifted_bins = self.shift_bin_edges(all_bins)
-        bin_means, bin_edges, bin_number = stats.binned_statistic(
-            self.data["shifted_phases"],
-            self.data["fluxes"],
-            statistic="mean",
-            bins=shifted_bins,
-        )
-        bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
-        bin_errors = np.zeros(len(bin_means))
-        # Calculate the propagated errors for each bin
-        bincounts = np.bincount(bin_number)[1:]
-        for i in range(len(bin_means)):
-            # Get the indices of the data points in this bin
-            bin_mask = (self.data["shifted_phases"] >= shifted_bins[i]) & (
-                self.data["shifted_phases"] < shifted_bins[i + 1]
+        # Check if we need to shift phases to avoid boundary crossings
+        needs_boundary_shift = self.detect_boundary_crossing(threshold=boundary_threshold)
+        
+        if needs_boundary_shift:
+            # Calculate and apply boundary shift
+            shift = self.calculate_boundary_shift(threshold=boundary_threshold)
+            self.apply_boundary_shift(shift)
+        
+        try:
+            all_bins = self.find_bin_edges()
+            shifted_bins = self.shift_bin_edges(all_bins)
+            bin_means, bin_edges, bin_number = stats.binned_statistic(
+                self.data["shifted_phases"],
+                self.data["fluxes"],
+                statistic="mean",
+                bins=shifted_bins,
             )
-            # Get the errors for these data points
-            flux_errors_in_bin = self.data["flux_errors"][bin_mask]
-            if len(flux_errors_in_bin) != bincounts[i]:
-                raise ValueError("Incorrect bin masking.")
-            # Calculate the propagated error for the bin
-            n = bincounts[i]
-            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
+            bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
+            
+            # Shift bin centers back to original phase space if we applied a boundary shift
+            if needs_boundary_shift:
+                # The bin_centers are in the shifted_phases space (after both boundary shift 
+                # and shift_bin_edges shift). To get back to original_phases space:
+                # original = (shifted_phases - bin_edge_shift - boundary_shift) % 1
+                total_shift = self.bin_edge_shift + self.boundary_shift
+                bin_centers = (bin_centers - total_shift) % 1.0
+                # Also shift bin_edges for consistency
+                bin_edges = (bin_edges - total_shift) % 1.0
+                # Sort to ensure proper ordering
+                sort_idx = np.argsort(bin_centers)
+                bin_centers = bin_centers[sort_idx]
+                bin_means = bin_means[sort_idx]
+                # Update bin_number to reflect new ordering
+                # sort_idx[i] gives the old bin index that should be at position i
+                # So we need to create an inverse mapping
+                inverse_sort = np.zeros(len(sort_idx), dtype=int)
+                for new_idx, old_idx in enumerate(sort_idx):
+                    inverse_sort[old_idx] = new_idx
+                # Remap bin_number: if a data point was in old bin i, it should now be in new bin inverse_sort[i]
+                bin_number_remapped = np.zeros_like(bin_number)
+                for old_bin_idx in range(len(sort_idx)):
+                    mask = (bin_number == old_bin_idx)
+                    bin_number_remapped[mask] = inverse_sort[old_bin_idx]
+                bin_number = bin_number_remapped
+            
+            bin_errors = np.zeros(len(bin_means))
+            # Calculate the propagated errors for each bin
+            bincounts = np.bincount(bin_number)[1:]
+            for i in range(len(bin_means)):
+                # Get the indices of the data points in this bin
+                bin_mask = (bin_number == i)
+                # Get the errors for these data points
+                flux_errors_in_bin = self.data["flux_errors"][bin_mask]
+                if len(flux_errors_in_bin) != bincounts[i]:
+                    raise ValueError("Incorrect bin masking.")
+                # Calculate the propagated error for the bin
+                n = bincounts[i]
+                bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
 
-        if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
-            if self.params["fraction_in_eclipse"] > 0.1:
-                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
-                print(
-                    f"Requested fraction of bins in eclipse regions results in empty bins; "
-                    f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
-                )
-                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
-                return self.calculate_bins()
-            raise ValueError("Not enough data to bin these eclipses.")
+            if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
+                if self.params["fraction_in_eclipse"] > 0.1:
+                    new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
+                    print(
+                        f"Requested fraction of bins in eclipse regions results in empty bins; "
+                        f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
+                    )
+                    self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                    # Restore original phases before retrying
+                    if needs_boundary_shift:
+                        self.restore_original_phases()
+                    return self.calculate_bins(boundary_threshold=boundary_threshold)
+                raise ValueError("Not enough data to bin these eclipses.")
+        finally:
+            # Always restore original phases after binning
+            if needs_boundary_shift:
+                self.restore_original_phases()
+        
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
     def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
