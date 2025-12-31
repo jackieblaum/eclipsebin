@@ -95,21 +95,14 @@ class EclipsingBinaryBinner:
             self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
             self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
 
-    def find_minimum_flux_phase(self, use_shifted_phases=False):
+    def find_minimum_flux_phase(self):
         """
         Finds the phase of the minimum flux, corresponding to the primary eclipse.
 
         Returns:
             float: Phase value of the primary eclipse minimum.
         """
-        if use_shifted_phases:
-            if "shifted_phases" in self.data:
-                phases = self.data["shifted_phases"]
-            else:
-                print("Must shift phases first.")
-                return -1
-        else:
-            phases = self.data["phases"]
+        phases = self.data["phases"]
         idx_min = np.argmin(self.data["fluxes"])
         return phases[idx_min]
 
@@ -122,7 +115,7 @@ class EclipsingBinaryBinner:
         """
         return np.min(self.data["fluxes"])
 
-    def find_secondary_minimum_phase(self, use_shifted_phases=False):
+    def find_secondary_minimum_phase(self):
         """
         Finds the phase of the secondary eclipse by identifying the minimum flux
         at least 0.2 phase units away from the primary eclipse.
@@ -130,9 +123,7 @@ class EclipsingBinaryBinner:
         Returns:
             float: Phase value of the secondary eclipse minimum.
         """
-        phases, mask = self._helper_secondary_minimum_mask(
-            use_shifted_phases=use_shifted_phases
-        )
+        phases, mask = self._helper_secondary_minimum_mask()
         idx_secondary_min = np.argmin(self.data["fluxes"][mask])
         return phases[mask][idx_secondary_min]
 
@@ -146,13 +137,9 @@ class EclipsingBinaryBinner:
         _, mask = self._helper_secondary_minimum_mask()
         return np.min(self.data["fluxes"][mask])
 
-    def _helper_secondary_minimum_mask(self, use_shifted_phases=False):
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-            primary_min_phase = self.find_minimum_flux_phase(use_shifted_phases=True)
-        else:
-            phases = self.data["phases"]
-            primary_min_phase = self.primary_eclipse_min_phase
+    def _helper_secondary_minimum_mask(self):
+        phases = self.data["phases"]
+        primary_min_phase = self.primary_eclipse_min_phase
         mask = np.abs(phases - primary_min_phase) > 0.2
         return phases, mask
 
@@ -221,38 +208,25 @@ class EclipsingBinaryBinner:
         self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
         self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
 
-    def get_eclipse_boundaries(self, primary=True, use_shifted_phases=False):
+    def get_eclipse_boundaries(self, primary=True):
         """
         Finds the start and end phase of an eclipse based on the minimum flux.
 
         Args:
-            eclipse_min_phase (float): Phase of the minimum flux.
+            primary (bool): If True, get primary eclipse boundaries, else secondary.
 
         Returns:
             tuple: Start and end phases of the eclipse.
         """
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-            if primary:
-                eclipse_min_phase = self.find_minimum_flux_phase(
-                    use_shifted_phases=True
-                )
-            else:
-                eclipse_min_phase = self.find_secondary_minimum_phase(
-                    use_shifted_phases=True
-                )
+        phases = self.data["phases"]
+        if primary:
+            eclipse_min_phase = self.primary_eclipse_min_phase
         else:
-            phases = self.data["phases"]
-            if primary:
-                eclipse_min_phase = self.primary_eclipse_min_phase
-            else:
-                eclipse_min_phase = self.secondary_eclipse_min_phase
-        start_idx, end_idx = self._find_eclipse_boundaries(
-            eclipse_min_phase, use_shifted_phases=use_shifted_phases
-        )
+            eclipse_min_phase = self.secondary_eclipse_min_phase
+        start_idx, end_idx = self._find_eclipse_boundaries(eclipse_min_phase)
         return (phases[start_idx], phases[end_idx])
 
-    def _find_eclipse_boundaries(self, eclipse_min_phase, use_shifted_phases=False):
+    def _find_eclipse_boundaries(self, eclipse_min_phase):
         """
         Determines the start and end indices of an eclipse.
 
@@ -262,12 +236,8 @@ class EclipsingBinaryBinner:
         Returns:
             tuple: Indices of the start and end of the eclipse.
         """
-        start_idx = self._find_eclipse_boundary(
-            eclipse_min_phase, direction="start", use_shifted_phases=use_shifted_phases
-        )
-        end_idx = self._find_eclipse_boundary(
-            eclipse_min_phase, direction="end", use_shifted_phases=use_shifted_phases
-        )
+        start_idx = self._find_eclipse_boundary(eclipse_min_phase, direction="start")
+        end_idx = self._find_eclipse_boundary(eclipse_min_phase, direction="end")
         return start_idx, end_idx
 
     def _find_boundary_index(self, idx_boundary, phases, direction, atol):
@@ -298,9 +268,7 @@ class EclipsingBinaryBinner:
         boundary_index = np.argmin(np.abs(phases - mid))
         return boundary_index
 
-    def _find_eclipse_boundary(
-        self, eclipse_min_phase, direction, use_shifted_phases=False
-    ):
+    def _find_eclipse_boundary(self, eclipse_min_phase, direction):
         """
         Finds the boundary index of an eclipse either before (start) or after (end)
             the minimum flux.
@@ -312,10 +280,7 @@ class EclipsingBinaryBinner:
         Returns:
             int: Index of the boundary point.
         """
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-        else:
-            phases = self.data["phases"]
+        phases = self.data["phases"]
         if direction == "start":
             mask = phases < eclipse_min_phase
         else:  # direction == 'end'
@@ -606,10 +571,9 @@ class EclipsingBinaryBinner:
         Plots the binned light curve and the bin edges.
 
         Args:
-            bin_centers (np.ndarray): Array of bin centers.
+            bin_centers (np.ndarray): Array of bin centers (in original phase space).
             bin_means (np.ndarray): Array of bin means.
             bin_stds (np.ndarray): Array of bin standard deviations.
-            bin_edges (np.ndarray): Array of bin edges.
         """
         plt.figure(figsize=(20, 5))
         plt.title("Binned Light Curve")
@@ -620,8 +584,17 @@ class EclipsingBinaryBinner:
         plt.ylabel("Normalized Flux", fontsize=14)
         plt.xlim(0, 1)
         ylims = plt.ylim()
+
+        # Get eclipse boundaries in original phase space
+        primary_bounds = self._rewrap_to_original_phase(
+            np.array(self.primary_eclipse)
+        )
+        secondary_bounds = self._rewrap_to_original_phase(
+            np.array(self.secondary_eclipse)
+        )
+
         plt.vlines(
-            self.get_eclipse_boundaries(primary=True, use_shifted_phases=True),
+            primary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -629,7 +602,7 @@ class EclipsingBinaryBinner:
             label="Primary Eclipse",
         )
         plt.vlines(
-            self.get_eclipse_boundaries(primary=False, use_shifted_phases=True),
+            secondary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -646,16 +619,29 @@ class EclipsingBinaryBinner:
         """
         plt.figure(figsize=(20, 5))
         plt.title("Unbinned Light Curve")
+
+        # Get data in original phase space for plotting
+        original_phases = self._rewrap_to_original_phase(self.data["phases"])
+
         plt.errorbar(
-            self.data["shifted_phases"],
+            original_phases,
             self.data["fluxes"],
             yerr=self.data["flux_errors"],
             linestyle="none",
             marker=".",
         )
         ylims = plt.ylim()
+
+        # Get eclipse boundaries in original phase space
+        primary_bounds = self._rewrap_to_original_phase(
+            np.array(self.primary_eclipse)
+        )
+        secondary_bounds = self._rewrap_to_original_phase(
+            np.array(self.secondary_eclipse)
+        )
+
         plt.vlines(
-            self.get_eclipse_boundaries(primary=True, use_shifted_phases=True),
+            primary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -663,7 +649,7 @@ class EclipsingBinaryBinner:
             label="Primary Eclipse",
         )
         plt.vlines(
-            self.get_eclipse_boundaries(primary=False, use_shifted_phases=True),
+            secondary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
