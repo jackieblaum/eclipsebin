@@ -146,6 +146,53 @@ class EclipsingBinaryBinner:
         mask = np.abs(phases - primary_min_phase) > 0.2
         return phases, mask
 
+    def _detect_wrapped_eclipse(self, eclipse_start, eclipse_end):
+        """
+        Detect if an eclipse wraps around the phase boundary.
+
+        Args:
+            eclipse_start (float): Start phase of eclipse
+            eclipse_end (float): End phase of eclipse
+
+        Returns:
+            bool: True if eclipse wraps around boundary (end < start)
+        """
+        return eclipse_end < eclipse_start
+
+    def _calculate_unwrap_shift(self):
+        """
+        Calculate the phase shift needed to unwrap any wrapped eclipses.
+
+        Returns:
+            float: Phase shift amount (0 if no wrapping detected)
+        """
+        # Check if either eclipse is wrapped
+        primary_wrapped = self._detect_wrapped_eclipse(
+            self.primary_eclipse[0], self.primary_eclipse[1]
+        )
+        secondary_wrapped = self._detect_wrapped_eclipse(
+            self.secondary_eclipse[0], self.secondary_eclipse[1]
+        )
+
+        if not (primary_wrapped or secondary_wrapped):
+            return 0.0
+
+        # Shift so the wrapped eclipse is centered away from boundaries
+        # Use midpoint of the eclipse that's NOT wrapped as reference
+        if primary_wrapped and not secondary_wrapped:
+            # Shift so primary is unwrapped - place it opposite secondary
+            secondary_mid = (self.secondary_eclipse[0] + self.secondary_eclipse[1]) / 2
+            shift = 0.5 - secondary_mid
+        elif secondary_wrapped and not primary_wrapped:
+            # Shift so secondary is unwrapped - place it opposite primary
+            primary_mid = (self.primary_eclipse[0] + self.primary_eclipse[1]) / 2
+            shift = 0.5 - primary_mid
+        else:
+            # Both wrapped (rare) - shift by 0.5
+            shift = 0.5
+
+        return shift % 1.0
+
     def get_eclipse_boundaries(self, primary=True, use_shifted_phases=False):
         """
         Finds the start and end phase of an eclipse based on the minimum flux.

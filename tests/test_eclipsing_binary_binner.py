@@ -476,3 +476,15 @@ def helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclips
     binner.plot_binned_light_curve(bin_centers, bin_means, bin_errors)
     binner.plot_unbinned_light_curve()
     matplotlib.pyplot.close()
+
+
+def test_detect_phase_wrapping(wrapped_light_curve):
+    """Test that phase wrapping is correctly detected"""
+    phases, fluxes, flux_errors = wrapped_light_curve
+    binner = EclipsingBinaryBinner(
+        phases, fluxes, flux_errors, nbins=100, fraction_in_eclipse=0.2
+    )
+    # For wrapped_light_curve fixture, secondary eclipse wraps around 0/1
+    # Check that phases were unwrapped (no eclipse crosses boundary)
+    assert binner.primary_eclipse[0] < binner.primary_eclipse[1]
+    assert binner.secondary_eclipse[0] < binner.secondary_eclipse[1]
