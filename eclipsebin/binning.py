@@ -529,6 +529,9 @@ class EclipsingBinaryBinner:
             tuple: Arrays of bin centers, bin means, bin standard deviations, bin numbers,
                 and bin edges.
         """
+        # Store original fraction_in_eclipse to restore it later
+        original_fraction_in_eclipse = self.params["fraction_in_eclipse"]
+
         # Check if we need to shift phases to avoid boundary crossings
         needs_boundary_shift = self.detect_boundary_crossing(
             threshold=boundary_threshold
@@ -613,7 +616,8 @@ class EclipsingBinaryBinner:
                     return self.calculate_bins(boundary_threshold=boundary_threshold)
                 raise ValueError("Not enough data to bin these eclipses.")
         finally:
-            # Always restore original phases after binning
+            # Always restore original phases and fraction_in_eclipse after binning
+            self.params["fraction_in_eclipse"] = original_fraction_in_eclipse
             if needs_boundary_shift:
                 self.restore_original_phases()
 
