@@ -180,11 +180,15 @@ class EclipsingBinaryBinner:
         if primary_wrapped and not secondary_wrapped:
             # Shift so primary unwraps but secondary stays unwrapped
             # Place the shift point between secondary end and primary start
-            shift = 1.0 - self.primary_eclipse[0] + 0.05  # Small offset to move primary start away from 0
+            shift = (
+                1.0 - self.primary_eclipse[0] + 0.05
+            )  # Small offset to move primary start away from 0
         elif secondary_wrapped and not primary_wrapped:
             # Shift so secondary unwraps but primary stays unwrapped
             # Place the shift point between primary end and secondary start
-            shift = 1.0 - self.secondary_eclipse[0] + 0.05  # Small offset to move secondary start away from 0
+            shift = (
+                1.0 - self.secondary_eclipse[0] + 0.05
+            )  # Small offset to move secondary start away from 0
         else:
             # Both wrapped (rare) - use 0.5
             shift = 0.5
@@ -488,7 +492,9 @@ class EclipsingBinaryBinner:
                     f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
                 )
                 self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
-                return self.calculate_bins(return_in_original_phase=return_in_original_phase)
+                return self.calculate_bins(
+                    return_in_original_phase=return_in_original_phase
+                )
             # If we can't reduce further, this combination of parameters is invalid
             raise ValueError(
                 "Not enough data to bin these eclipses with the requested parameters. "
@@ -524,7 +530,7 @@ class EclipsingBinaryBinner:
                 "Not enough unique phase values to create the requested number of bins."
             )
 
-        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates='drop')
+        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates="drop")
         return np.array([interval.right for interval in np.unique(bins)])
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
@@ -561,12 +567,14 @@ class EclipsingBinaryBinner:
             ]
         else:
             # OOE1 wraps around
-            ooe1_phases = np.concatenate((
-                self.data["phases"][end_idx_secondary_eclipse:],
-                self.data["phases"][: start_idx_primary_eclipse + 1] + 1
-            ))
+            ooe1_phases = np.concatenate(
+                (
+                    self.data["phases"][end_idx_secondary_eclipse:],
+                    self.data["phases"][: start_idx_primary_eclipse + 1] + 1,
+                )
+            )
 
-        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates='drop')
+        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates="drop")
         ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
 
         # OOE2: between end of primary eclipse and start of secondary eclipse
@@ -584,12 +592,14 @@ class EclipsingBinaryBinner:
             ]
         else:
             # OOE2 wraps around
-            ooe2_phases = np.concatenate((
-                self.data["phases"][end_idx_primary_eclipse:],
-                self.data["phases"][: start_idx_secondary_eclipse + 1] + 1
-            ))
+            ooe2_phases = np.concatenate(
+                (
+                    self.data["phases"][end_idx_primary_eclipse:],
+                    self.data["phases"][: start_idx_secondary_eclipse + 1] + 1,
+                )
+            )
 
-        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates='drop')
+        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates="drop")
         ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)]) % 1
 
         return ooe1_edges, ooe2_edges
@@ -614,9 +624,7 @@ class EclipsingBinaryBinner:
         ylims = plt.ylim()
 
         # Get eclipse boundaries in original phase space
-        primary_bounds = self._rewrap_to_original_phase(
-            np.array(self.primary_eclipse)
-        )
+        primary_bounds = self._rewrap_to_original_phase(np.array(self.primary_eclipse))
         secondary_bounds = self._rewrap_to_original_phase(
             np.array(self.secondary_eclipse)
         )
@@ -661,9 +669,7 @@ class EclipsingBinaryBinner:
         ylims = plt.ylim()
 
         # Get eclipse boundaries in original phase space
-        primary_bounds = self._rewrap_to_original_phase(
-            np.array(self.primary_eclipse)
-        )
+        primary_bounds = self._rewrap_to_original_phase(np.array(self.primary_eclipse))
         secondary_bounds = self._rewrap_to_original_phase(
             np.array(self.secondary_eclipse)
         )

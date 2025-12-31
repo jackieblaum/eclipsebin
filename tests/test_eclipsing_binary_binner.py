@@ -414,9 +414,13 @@ def helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclip
         # after exhausting graceful degradation (e.g., very high bin counts
         # with very low fraction_in_eclipse on synthetic test data)
         if "Not enough data" in str(e) and fraction_in_eclipse == 0.1 and nbins >= 100:
-            pytest.skip(f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}")
+            pytest.skip(
+                f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}"
+            )
         if "Not enough data" in str(e) and fraction_in_eclipse == 0.3 and nbins == 200:
-            pytest.skip(f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}")
+            pytest.skip(
+                f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}"
+            )
         raise
 
     assert len(bin_centers) > 0
