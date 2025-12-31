@@ -348,39 +348,52 @@ class EclipsingBinaryBinner:
         """
         Finds the bin edges within the light curve.
         """
+        # Store original fraction_in_eclipse to restore it if we fail
+        original_fraction = self.params["fraction_in_eclipse"]
+        min_fraction = 0.01  # Minimum fraction below which we won't reduce further
 
-        bins_in_primary, bins_in_secondary = self.calculate_eclipse_bins_distribution()
-
-        primary_bin_edges = self.calculate_eclipse_bins(
-            self.primary_eclipse, bins_in_primary
-        )
-        secondary_bin_edges = self.calculate_eclipse_bins(
-            self.secondary_eclipse, bins_in_secondary
-        )
-
-        ooe1_bins, ooe2_bins = self.calculate_out_of_eclipse_bins(
-            bins_in_primary, bins_in_secondary
-        )
-
-        all_bins = np.sort(
-            np.concatenate(
-                (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
+        try:
+            bins_in_primary, bins_in_secondary = (
+                self.calculate_eclipse_bins_distribution()
             )
-        )
-        if len(np.unique(all_bins)) != len(all_bins):
-            if self.params["fraction_in_eclipse"] > 0.1:
-                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
-                print(
-                    f"Binning resulted in repeat edges; trying again with "
-                    f"fraction_in_eclipse={new_fraction_in_eclipse}"
+
+            primary_bin_edges = self.calculate_eclipse_bins(
+                self.primary_eclipse, bins_in_primary
+            )
+            secondary_bin_edges = self.calculate_eclipse_bins(
+                self.secondary_eclipse, bins_in_secondary
+            )
+
+            ooe1_bins, ooe2_bins = self.calculate_out_of_eclipse_bins(
+                bins_in_primary, bins_in_secondary
+            )
+
+            all_bins = np.sort(
+                np.concatenate(
+                    (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
                 )
-                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
-                return self.find_bin_edges()
-            raise ValueError(
-                "There may not be enough data to bin these eclipses. Try "
-                "changing the atol values for detecting eclipse boundaries with set_atol()."
             )
-        return all_bins
+            if len(np.unique(all_bins)) != len(all_bins):
+                # Only reduce if we're above the minimum threshold
+                if self.params["fraction_in_eclipse"] > min_fraction:
+                    new_fraction_in_eclipse = max(
+                        min_fraction, self.params["fraction_in_eclipse"] - 0.1
+                    )
+                    print(
+                        f"Binning resulted in repeat edges; trying again with "
+                        f"fraction_in_eclipse={new_fraction_in_eclipse}"
+                    )
+                    self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                    return self.find_bin_edges()
+                raise ValueError(
+                    "There may not be enough data to bin these eclipses. Try "
+                    "changing the atol values for detecting eclipse boundaries with set_atol()."
+                )
+            return all_bins
+        except ValueError:
+            # Restore original fraction_in_eclipse if we fail
+            self.params["fraction_in_eclipse"] = original_fraction
+            raise
 
     def detect_boundary_crossing(self, threshold=0.2):
         """
