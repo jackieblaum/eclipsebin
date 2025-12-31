@@ -641,14 +641,21 @@ class EclipsingBinaryBinner:
             if end_idx < start_idx
             else self.data["phases"][start_idx : end_idx + 1]
         )
+        # Handle edge case where bins_in_eclipse is 0
+        if bins_in_eclipse == 0:
+            return np.array([])
+
         # Ensure there are enough unique phases for the number of bins requested
         if len(np.unique(eclipse_phases)) < bins_in_eclipse:
             raise ValueError(
                 "Not enough unique phase values to create the requested number of bins."
             )
 
-        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-        return np.array([interval.right for interval in np.unique(bins)]) % 1
+        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates="drop")
+        # Extract unique bin intervals from the categorical
+        # Use categories to get the interval objects
+        unique_intervals = bins.cat.categories
+        return np.array([interval.right for interval in unique_intervals]) % 1
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
@@ -687,8 +694,12 @@ class EclipsingBinaryBinner:
                 end_idx_secondary_eclipse : start_idx_primary_eclipse + 1
             ]
         )
-        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
-        ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
+        if bins_in_ooe1 > 0:
+            ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates="drop")
+            unique_intervals = ooe1_bins.cat.categories
+            ooe1_edges = np.array([interval.right for interval in unique_intervals]) % 1
+        else:
+            ooe1_edges = np.array([])
 
         # Calculate bin edges between end of primary eclipse and start of secondary eclipse
         end_idx_primary_eclipse = np.searchsorted(
@@ -709,8 +720,12 @@ class EclipsingBinaryBinner:
                 end_idx_primary_eclipse : start_idx_secondary_eclipse + 1
             ]
         )
-        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2)
-        ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)]) % 1
+        if bins_in_ooe2 > 0:
+            ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates="drop")
+            unique_intervals = ooe2_bins.cat.categories
+            ooe2_edges = np.array([interval.right for interval in unique_intervals]) % 1
+        else:
+            ooe2_edges = np.array([])
 
         return ooe1_edges, ooe2_edges
 
