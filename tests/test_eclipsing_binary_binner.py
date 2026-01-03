@@ -527,3 +527,57 @@ def test_both_eclipses_near_boundary(both_near_boundary_light_curve):
     bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
     assert abs(len(bin_centers) - 100) <= 2  # Allow ±2 bins due to duplicates='drop'
     assert np.all(bin_errors > 0)
+
+
+@pytest.fixture
+def negative_phase_light_curve():
+    """
+    Fixture for light curve with phases in [-0.5, 0.5] range (PHOEBE-style).
+    Primary eclipse at phase 0, secondary eclipse wrapped around ±0.5 boundary.
+    """
+    np.random.seed(99)
+    # Phases from -0.5 to 0.5 (PHOEBE convention)
+    phases = np.linspace(-0.5, 0.4999, 10000)
+    fluxes = np.ones_like(phases)
+
+    # Primary eclipse centered at phase 0
+    # Indices 4500-5500 correspond to phases around 0
+    fluxes[4500:5000] = np.linspace(0.95, 0.8, 500)
+    fluxes[5000:5500] = np.linspace(0.8, 0.95, 500)
+
+    # Secondary eclipse wrapping around ±0.5 boundary
+    # Near phase 0.5 (end of array) and -0.5 (start of array)
+    fluxes[9700:10000] = np.linspace(0.95, 0.9, 300)  # phase ~0.47 to 0.5
+    fluxes[0:300] = np.linspace(0.9, 0.95, 300)  # phase -0.5 to ~-0.47
+
+    flux_errors = np.random.normal(0.01, 0.001, 10000)
+
+    # Random subset
+    random_indices = np.random.choice(range(len(phases)), size=5000, replace=False)
+    return phases[random_indices], fluxes[random_indices], flux_errors[random_indices]
+
+
+def test_negative_phase_input(negative_phase_light_curve):
+    """Test that negative phase inputs (PHOEBE-style [-0.5, 0.5]) are handled correctly."""
+    phases, fluxes, flux_errors = negative_phase_light_curve
+
+    # Verify input has negative phases
+    assert np.min(phases) < 0, "Test fixture should have negative phases"
+
+    # Should not raise an error
+    binner = EclipsingBinaryBinner(
+        phases, fluxes, flux_errors, nbins=100, fraction_in_eclipse=0.2
+    )
+
+    # Binning should succeed
+    bin_centers, bin_means, bin_errors = binner.bin_light_curve(plot=False)
+
+    # Results should be in original phase space [-0.5, 0.5]
+    assert np.min(bin_centers) >= -0.5, "Bin centers should be >= -0.5"
+    assert np.max(bin_centers) <= 0.5, "Bin centers should be <= 0.5"
+
+    # Should have expected number of bins (allow small tolerance)
+    assert abs(len(bin_centers) - 100) <= 2
+
+    # All bin errors should be positive
+    assert np.all(bin_errors > 0)
