@@ -470,17 +470,20 @@ class EclipsingBinaryBinner:
 
     def _rewrap_to_original_phase(self, phases_array):
         """
-        Rewrap phases back to original phase space before unwrapping.
+        Rewrap phases back to original phase space before unwrapping,
+        then denormalize if original input had non-standard range.
 
         Args:
-            phases_array (np.ndarray): Array of phases in unwrapped space
+            phases_array (np.ndarray): Array of phases in unwrapped [0, 1] space
 
         Returns:
             np.ndarray: Phases shifted back to original space
         """
-        if self._phase_shift == 0.0:
-            return phases_array
-        return (phases_array - self._phase_shift) % 1.0
+        result = phases_array
+        if self._phase_shift != 0.0:
+            result = (result - self._phase_shift) % 1.0
+        # Denormalize back to original range (e.g., [-0.5, 0.5])
+        return self._denormalize_phases(result)
 
     def calculate_bins(self, return_in_original_phase=True):
         """
