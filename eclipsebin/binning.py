@@ -667,7 +667,10 @@ class EclipsingBinaryBinner:
         )
         plt.xlabel("Phases", fontsize=14)
         plt.ylabel("Normalized Flux", fontsize=14)
-        plt.xlim(0, 1)
+        if self._needs_denormalization:
+            plt.xlim(self._original_phase_min, self._original_phase_max)
+        else:
+            plt.xlim(0, 1)
         ylims = plt.ylim()
 
         # Get eclipse boundaries in original phase space
@@ -738,7 +741,10 @@ class EclipsingBinaryBinner:
             label="Secondary Eclipse",
         )
         plt.ylim(ylims)
-        plt.xlim(0, 1)
+        if self._needs_denormalization:
+            plt.xlim(self._original_phase_min, self._original_phase_max)
+        else:
+            plt.xlim(0, 1)
         plt.ylabel("Normalized Flux", fontsize=14)
         plt.xlabel("Phases", fontsize=14)
         plt.legend()
