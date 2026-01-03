@@ -124,6 +124,21 @@ class EclipsingBinaryBinner:
         # Shift so minimum is at 0, then scale to [0, 1]
         return (phases - self._original_phase_min) / self._original_phase_range
 
+    def _denormalize_phases(self, phases):
+        """
+        Convert phases from [0, 1] back to original range.
+
+        Args:
+            phases (np.ndarray): Phases in [0, 1] range
+
+        Returns:
+            np.ndarray: Phases in original range
+        """
+        if not self._needs_denormalization:
+            return phases
+        # Scale from [0, 1] back to original range
+        return phases * self._original_phase_range + self._original_phase_min
+
     def find_minimum_flux_phase(self):
         """
         Finds the phase of the minimum flux, corresponding to the primary eclipse.
