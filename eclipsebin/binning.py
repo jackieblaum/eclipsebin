@@ -75,6 +75,22 @@ class EclipsingBinaryBinner:
             "atol_secondary": None,
         }
 
+        # Detect and store original phase range for denormalization later
+        self._original_phase_min = np.min(phases)
+        self._original_phase_max = np.max(phases)
+        self._original_phase_range = self._original_phase_max - self._original_phase_min
+
+        # Normalize phases to [0, 1] if not already
+        if self._original_phase_min < 0 or self._original_phase_max > 1:
+            self._needs_denormalization = True
+            normalized_phases = self._normalize_phases(phases)
+            sort_idx = np.argsort(normalized_phases)
+            self.data["phases"] = normalized_phases[sort_idx]
+            self.data["fluxes"] = fluxes[sort_idx]
+            self.data["flux_errors"] = flux_errors[sort_idx]
+        else:
+            self._needs_denormalization = False
+
         self.set_atol(primary=atol_primary, secondary=atol_secondary)
 
         # Identify primary and secondary eclipse minima (in original phase space)
@@ -94,6 +110,19 @@ class EclipsingBinaryBinner:
             # Recalculate eclipse boundaries in unwrapped space
             self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
             self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+
+    def _normalize_phases(self, phases):
+        """
+        Normalize phases from original range to [0, 1].
+
+        Args:
+            phases (np.ndarray): Phases in original range
+
+        Returns:
+            np.ndarray: Phases normalized to [0, 1]
+        """
+        # Shift so minimum is at 0, then scale to [0, 1]
+        return (phases - self._original_phase_min) / self._original_phase_range
 
     def find_minimum_flux_phase(self):
         """
