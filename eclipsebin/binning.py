@@ -77,29 +77,32 @@ class EclipsingBinaryBinner:
 
         self.set_atol(primary=atol_primary, secondary=atol_secondary)
 
-        # Identify primary and secondary eclipse minima
+        # Identify primary and secondary eclipse minima (in original phase space)
         self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
         self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
 
-        # Determine start and end of each eclipse
+        # Determine start and end of each eclipse (in original phase space)
         self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
         self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
 
-    def find_minimum_flux_phase(self, use_shifted_phases=False):
+        # Calculate shift needed to unwrap any wrapped eclipses
+        self._phase_shift = self._calculate_unwrap_shift()
+
+        # Apply unwrapping if needed
+        if self._phase_shift != 0.0:
+            self._unwrap_phases()
+            # Recalculate eclipse boundaries in unwrapped space
+            self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
+            self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+
+    def find_minimum_flux_phase(self):
         """
         Finds the phase of the minimum flux, corresponding to the primary eclipse.
 
         Returns:
             float: Phase value of the primary eclipse minimum.
         """
-        if use_shifted_phases:
-            if "shifted_phases" in self.data:
-                phases = self.data["shifted_phases"]
-            else:
-                print("Must shift phases first.")
-                return -1
-        else:
-            phases = self.data["phases"]
+        phases = self.data["phases"]
         idx_min = np.argmin(self.data["fluxes"])
         return phases[idx_min]
 
@@ -112,7 +115,7 @@ class EclipsingBinaryBinner:
         """
         return np.min(self.data["fluxes"])
 
-    def find_secondary_minimum_phase(self, use_shifted_phases=False):
+    def find_secondary_minimum_phase(self):
         """
         Finds the phase of the secondary eclipse by identifying the minimum flux
         at least 0.2 phase units away from the primary eclipse.
@@ -120,9 +123,7 @@ class EclipsingBinaryBinner:
         Returns:
             float: Phase value of the secondary eclipse minimum.
         """
-        phases, mask = self._helper_secondary_minimum_mask(
-            use_shifted_phases=use_shifted_phases
-        )
+        phases, mask = self._helper_secondary_minimum_mask()
         idx_secondary_min = np.argmin(self.data["fluxes"][mask])
         return phases[mask][idx_secondary_min]
 
@@ -136,48 +137,100 @@ class EclipsingBinaryBinner:
         _, mask = self._helper_secondary_minimum_mask()
         return np.min(self.data["fluxes"][mask])
 
-    def _helper_secondary_minimum_mask(self, use_shifted_phases=False):
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-            primary_min_phase = self.find_minimum_flux_phase(use_shifted_phases=True)
-        else:
-            phases = self.data["phases"]
-            primary_min_phase = self.primary_eclipse_min_phase
+    def _helper_secondary_minimum_mask(self):
+        phases = self.data["phases"]
+        primary_min_phase = self.primary_eclipse_min_phase
         mask = np.abs(phases - primary_min_phase) > 0.2
         return phases, mask
 
-    def get_eclipse_boundaries(self, primary=True, use_shifted_phases=False):
+    def _detect_wrapped_eclipse(self, eclipse_start, eclipse_end):
+        """
+        Detect if an eclipse wraps around the phase boundary.
+
+        Args:
+            eclipse_start (float): Start phase of eclipse
+            eclipse_end (float): End phase of eclipse
+
+        Returns:
+            bool: True if eclipse wraps around boundary (end < start)
+        """
+        return eclipse_end < eclipse_start
+
+    def _calculate_unwrap_shift(self):
+        """
+        Calculate the phase shift needed to unwrap any wrapped eclipses.
+
+        Returns:
+            float: Phase shift amount (0 if no wrapping detected)
+        """
+        # Check if either eclipse is wrapped
+        primary_wrapped = self._detect_wrapped_eclipse(
+            self.primary_eclipse[0], self.primary_eclipse[1]
+        )
+        secondary_wrapped = self._detect_wrapped_eclipse(
+            self.secondary_eclipse[0], self.secondary_eclipse[1]
+        )
+
+        if not (primary_wrapped or secondary_wrapped):
+            return 0.0
+
+        # Calculate shift to unwrap the wrapped eclipse
+        # Shift to place the wrapped eclipse midpoint away from the 0/1 boundary
+        # while keeping the unwrapped eclipse unwrapped
+        if primary_wrapped and not secondary_wrapped:
+            # Shift so primary unwraps but secondary stays unwrapped
+            # Place the shift point between secondary end and primary start
+            shift = (
+                1.0 - self.primary_eclipse[0] + 0.05
+            )  # Small offset to move primary start away from 0
+        elif secondary_wrapped and not primary_wrapped:
+            # Shift so secondary unwraps but primary stays unwrapped
+            # Place the shift point between primary end and secondary start
+            shift = (
+                1.0 - self.secondary_eclipse[0] + 0.05
+            )  # Small offset to move secondary start away from 0
+        else:
+            # Both wrapped (rare) - use 0.5
+            shift = 0.5
+
+        return shift % 1.0
+
+    def _unwrap_phases(self):
+        """
+        Unwrap phases by applying the calculated shift.
+        This ensures no eclipse crosses the 0/1 boundary.
+        """
+        self.data["phases"] = (self.data["phases"] + self._phase_shift) % 1.0
+        # Re-sort after shifting
+        sort_idx = np.argsort(self.data["phases"])
+        self.data["phases"] = self.data["phases"][sort_idx]
+        self.data["fluxes"] = self.data["fluxes"][sort_idx]
+        self.data["flux_errors"] = self.data["flux_errors"][sort_idx]
+
+        # Recalculate eclipse minima in unwrapped space
+        # (they should be at the same flux values, just different phases)
+        self.primary_eclipse_min_phase = self.find_minimum_flux_phase()
+        self.secondary_eclipse_min_phase = self.find_secondary_minimum_phase()
+
+    def get_eclipse_boundaries(self, primary=True):
         """
         Finds the start and end phase of an eclipse based on the minimum flux.
 
         Args:
-            eclipse_min_phase (float): Phase of the minimum flux.
+            primary (bool): If True, get primary eclipse boundaries, else secondary.
 
         Returns:
             tuple: Start and end phases of the eclipse.
         """
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-            if primary:
-                eclipse_min_phase = self.find_minimum_flux_phase(
-                    use_shifted_phases=True
-                )
-            else:
-                eclipse_min_phase = self.find_secondary_minimum_phase(
-                    use_shifted_phases=True
-                )
+        phases = self.data["phases"]
+        if primary:
+            eclipse_min_phase = self.primary_eclipse_min_phase
         else:
-            phases = self.data["phases"]
-            if primary:
-                eclipse_min_phase = self.primary_eclipse_min_phase
-            else:
-                eclipse_min_phase = self.secondary_eclipse_min_phase
-        start_idx, end_idx = self._find_eclipse_boundaries(
-            eclipse_min_phase, use_shifted_phases=use_shifted_phases
-        )
+            eclipse_min_phase = self.secondary_eclipse_min_phase
+        start_idx, end_idx = self._find_eclipse_boundaries(eclipse_min_phase)
         return (phases[start_idx], phases[end_idx])
 
-    def _find_eclipse_boundaries(self, eclipse_min_phase, use_shifted_phases=False):
+    def _find_eclipse_boundaries(self, eclipse_min_phase):
         """
         Determines the start and end indices of an eclipse.
 
@@ -187,12 +240,8 @@ class EclipsingBinaryBinner:
         Returns:
             tuple: Indices of the start and end of the eclipse.
         """
-        start_idx = self._find_eclipse_boundary(
-            eclipse_min_phase, direction="start", use_shifted_phases=use_shifted_phases
-        )
-        end_idx = self._find_eclipse_boundary(
-            eclipse_min_phase, direction="end", use_shifted_phases=use_shifted_phases
-        )
+        start_idx = self._find_eclipse_boundary(eclipse_min_phase, direction="start")
+        end_idx = self._find_eclipse_boundary(eclipse_min_phase, direction="end")
         return start_idx, end_idx
 
     def _find_boundary_index(self, idx_boundary, phases, direction, atol):
@@ -223,9 +272,7 @@ class EclipsingBinaryBinner:
         boundary_index = np.argmin(np.abs(phases - mid))
         return boundary_index
 
-    def _find_eclipse_boundary(
-        self, eclipse_min_phase, direction, use_shifted_phases=False
-    ):
+    def _find_eclipse_boundary(self, eclipse_min_phase, direction):
         """
         Finds the boundary index of an eclipse either before (start) or after (end)
             the minimum flux.
@@ -237,10 +284,7 @@ class EclipsingBinaryBinner:
         Returns:
             int: Index of the boundary point.
         """
-        if use_shifted_phases:
-            phases = self.data["shifted_phases"]
-        else:
-            phases = self.data["phases"]
+        phases = self.data["phases"]
         if direction == "start":
             mask = phases < eclipse_min_phase
         else:  # direction == 'end'
@@ -307,16 +351,7 @@ class EclipsingBinaryBinner:
             (self.params["nbins"] * self.params["fraction_in_eclipse"]) / 2
         )
         start_idx, end_idx = np.searchsorted(self.data["phases"], self.primary_eclipse)
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
         bins_in_primary = min(bins_in_primary, len(np.unique(eclipse_phases)))
 
         bins_in_secondary = int(
@@ -326,17 +361,9 @@ class EclipsingBinaryBinner:
         start_idx, end_idx = np.searchsorted(
             self.data["phases"], self.secondary_eclipse
         )
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
         bins_in_secondary = min(bins_in_secondary, len(np.unique(eclipse_phases)))
+
         return bins_in_primary, bins_in_secondary
 
     def find_bin_edges(self):
@@ -362,6 +389,8 @@ class EclipsingBinaryBinner:
                 (primary_bin_edges, secondary_bin_edges, ooe1_bins, ooe2_bins)
             )
         )
+
+        # Check for duplicate edges
         if len(np.unique(all_bins)) != len(all_bins):
             if self.params["fraction_in_eclipse"] > 0.1:
                 new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
@@ -375,42 +404,75 @@ class EclipsingBinaryBinner:
                 "There may not be enough data to bin these eclipses. Try "
                 "changing the atol values for detecting eclipse boundaries with set_atol()."
             )
+
+        # Check if we have significantly different number of bins than requested
+        # Allow small differences (< 2%) due to duplicates='drop' rounding
+        bin_count_diff = abs(len(all_bins) - self.params["nbins"])
+        if bin_count_diff > max(1, 0.02 * self.params["nbins"]):
+            if self.params["fraction_in_eclipse"] > 0.1:
+                new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
+                print(
+                    f"Requested {self.params['nbins']} bins but got {len(all_bins)} "
+                    f"due to data distribution; trying fraction_in_eclipse={new_fraction_in_eclipse}"
+                )
+                self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
+                return self.find_bin_edges()
+            raise ValueError(
+                "Cannot create the requested number of bins. Try "
+                "reducing nbins or changing the atol values for detecting eclipse boundaries."
+            )
+
         return all_bins
 
-    def shift_bin_edges(self, bins):
+    def _rewrap_to_original_phase(self, phases_array):
         """
-        Shift the bins so that the rightmost bin edge is set to be 1.
-        """
-        rightmost_edge = bins[-1]
-        shifted_bins = bins + (1 - rightmost_edge)
-        self.data["shifted_phases"] = (self.data["phases"] + (1 - rightmost_edge)) % 1
-        shifted_bins = np.concatenate([[0], shifted_bins])
-        return shifted_bins
+        Rewrap phases back to original phase space before unwrapping.
 
-    def calculate_bins(self):
+        Args:
+            phases_array (np.ndarray): Array of phases in unwrapped space
+
+        Returns:
+            np.ndarray: Phases shifted back to original space
+        """
+        if self._phase_shift == 0.0:
+            return phases_array
+        return (phases_array - self._phase_shift) % 1.0
+
+    def calculate_bins(self, return_in_original_phase=True):
         """
         Calculates the bin centers, means, and standard deviations for the binned light curve.
+
+        Args:
+            return_in_original_phase (bool): If True, return results in original phase space
+                (before unwrapping). If False, return in unwrapped space. Defaults to True.
 
         Returns:
             tuple: Arrays of bin centers, bin means, bin standard deviations, bin numbers,
                 and bin edges.
         """
         all_bins = self.find_bin_edges()
-        shifted_bins = self.shift_bin_edges(all_bins)
-        bin_means, bin_edges, bin_number = stats.binned_statistic(
-            self.data["shifted_phases"],
+
+        # Add phase 0 and 1 as boundaries for binned_statistic
+        bin_edges = np.concatenate([[0], all_bins, [1]])
+
+        # Ensure no duplicate edges (can occur at region boundaries even with duplicates='drop')
+        bin_edges = np.unique(bin_edges)
+
+        bin_means, _, bin_number = stats.binned_statistic(
+            self.data["phases"],
             self.data["fluxes"],
             statistic="mean",
-            bins=shifted_bins,
+            bins=bin_edges,
         )
         bin_centers = (bin_edges[1:] - bin_edges[:-1]) / 2 + bin_edges[:-1]
         bin_errors = np.zeros(len(bin_means))
+
         # Calculate the propagated errors for each bin
-        bincounts = np.bincount(bin_number)[1:]
+        bincounts = np.bincount(bin_number, minlength=len(bin_edges))[1:]
         for i in range(len(bin_means)):
             # Get the indices of the data points in this bin
-            bin_mask = (self.data["shifted_phases"] >= shifted_bins[i]) & (
-                self.data["shifted_phases"] < shifted_bins[i + 1]
+            bin_mask = (self.data["phases"] >= bin_edges[i]) & (
+                self.data["phases"] < bin_edges[i + 1]
             )
             # Get the errors for these data points
             flux_errors_in_bin = self.data["flux_errors"][bin_mask]
@@ -418,9 +480,11 @@ class EclipsingBinaryBinner:
                 raise ValueError("Incorrect bin masking.")
             # Calculate the propagated error for the bin
             n = bincounts[i]
-            bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
+            if n > 0:
+                bin_errors[i] = np.sqrt(np.sum(flux_errors_in_bin**2)) / n
 
-        if np.all(bincounts) <= 0 or np.all(bin_errors) <= 0:
+        if np.any(bincounts <= 0) or np.any(bin_errors <= 0):
+            # Only retry if we have room to reduce fraction_in_eclipse
             if self.params["fraction_in_eclipse"] > 0.1:
                 new_fraction_in_eclipse = self.params["fraction_in_eclipse"] - 0.1
                 print(
@@ -428,8 +492,20 @@ class EclipsingBinaryBinner:
                     f"trying fraction_in_eclipse={new_fraction_in_eclipse}"
                 )
                 self.params["fraction_in_eclipse"] = new_fraction_in_eclipse
-                return self.calculate_bins()
-            raise ValueError("Not enough data to bin these eclipses.")
+                return self.calculate_bins(
+                    return_in_original_phase=return_in_original_phase
+                )
+            # If we can't reduce further, this combination of parameters is invalid
+            raise ValueError(
+                "Not enough data to bin these eclipses with the requested parameters. "
+                "Try reducing nbins or increasing fraction_in_eclipse."
+            )
+
+        # Rewrap to original phase space if requested
+        if return_in_original_phase:
+            bin_centers = self._rewrap_to_original_phase(bin_centers)
+            bin_edges = self._rewrap_to_original_phase(bin_edges)
+
         return bin_centers, bin_means, bin_errors, bin_number, bin_edges
 
     def calculate_eclipse_bins(self, eclipse_boundaries, bins_in_eclipse):
@@ -444,24 +520,18 @@ class EclipsingBinaryBinner:
             np.ndarray: Array of bin edges within the eclipse.
         """
         start_idx, end_idx = np.searchsorted(self.data["phases"], eclipse_boundaries)
-        eclipse_phases = (
-            np.concatenate(
-                (
-                    self.data["phases"][start_idx:],
-                    self.data["phases"][: end_idx + 1] + 1,
-                )
-            )
-            if end_idx < start_idx
-            else self.data["phases"][start_idx : end_idx + 1]
-        )
+
+        # Since phases are now unwrapped, we can directly slice
+        eclipse_phases = self.data["phases"][start_idx : end_idx + 1]
+
         # Ensure there are enough unique phases for the number of bins requested
         if len(np.unique(eclipse_phases)) < bins_in_eclipse:
             raise ValueError(
                 "Not enough unique phase values to create the requested number of bins."
             )
 
-        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse)
-        return np.array([interval.right for interval in np.unique(bins)]) % 1
+        bins = pd.qcut(eclipse_phases, q=bins_in_eclipse, duplicates="drop")
+        return np.array([interval.right for interval in np.unique(bins)])
 
     def calculate_out_of_eclipse_bins(self, bins_in_primary, bins_in_secondary):
         """
@@ -481,48 +551,55 @@ class EclipsingBinaryBinner:
             self.params["nbins"] - bins_in_primary - bins_in_secondary - bins_in_ooe1
         )
 
-        # Calculate bin edges between end of secondary eclipse and start of primary eclipse
+        # OOE1: between end of secondary eclipse and start of primary eclipse
         end_idx_secondary_eclipse = np.searchsorted(
             self.data["phases"], self.secondary_eclipse[1]
         )
         start_idx_primary_eclipse = np.searchsorted(
             self.data["phases"], self.primary_eclipse[0]
         )
-        ooe1_phases = (
-            np.concatenate(
+
+        # Eclipses are unwrapped, but OOE regions may still wrap
+        if end_idx_secondary_eclipse <= start_idx_primary_eclipse:
+            # No wrapping in OOE1
+            ooe1_phases = self.data["phases"][
+                end_idx_secondary_eclipse : start_idx_primary_eclipse + 1
+            ]
+        else:
+            # OOE1 wraps around
+            ooe1_phases = np.concatenate(
                 (
                     self.data["phases"][end_idx_secondary_eclipse:],
                     self.data["phases"][: start_idx_primary_eclipse + 1] + 1,
                 )
             )
-            if end_idx_secondary_eclipse > start_idx_primary_eclipse
-            else self.data["phases"][
-                end_idx_secondary_eclipse : start_idx_primary_eclipse + 1
-            ]
-        )
-        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1)
+
+        ooe1_bins = pd.qcut(ooe1_phases, q=bins_in_ooe1, duplicates="drop")
         ooe1_edges = np.array([interval.right for interval in np.unique(ooe1_bins)]) % 1
 
-        # Calculate bin edges between end of primary eclipse and start of secondary eclipse
+        # OOE2: between end of primary eclipse and start of secondary eclipse
         end_idx_primary_eclipse = np.searchsorted(
             self.data["phases"], self.primary_eclipse[1]
         )
         start_idx_secondary_eclipse = np.searchsorted(
             self.data["phases"], self.secondary_eclipse[0]
         )
-        ooe2_phases = (
-            np.concatenate(
+
+        if end_idx_primary_eclipse <= start_idx_secondary_eclipse:
+            # No wrapping in OOE2
+            ooe2_phases = self.data["phases"][
+                end_idx_primary_eclipse : start_idx_secondary_eclipse + 1
+            ]
+        else:
+            # OOE2 wraps around
+            ooe2_phases = np.concatenate(
                 (
                     self.data["phases"][end_idx_primary_eclipse:],
                     self.data["phases"][: start_idx_secondary_eclipse + 1] + 1,
                 )
             )
-            if end_idx_primary_eclipse > start_idx_secondary_eclipse
-            else self.data["phases"][
-                end_idx_primary_eclipse : start_idx_secondary_eclipse + 1
-            ]
-        )
-        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2)
+
+        ooe2_bins = pd.qcut(ooe2_phases, q=bins_in_ooe2, duplicates="drop")
         ooe2_edges = np.array([interval.right for interval in np.unique(ooe2_bins)]) % 1
 
         return ooe1_edges, ooe2_edges
@@ -532,10 +609,9 @@ class EclipsingBinaryBinner:
         Plots the binned light curve and the bin edges.
 
         Args:
-            bin_centers (np.ndarray): Array of bin centers.
+            bin_centers (np.ndarray): Array of bin centers (in original phase space).
             bin_means (np.ndarray): Array of bin means.
             bin_stds (np.ndarray): Array of bin standard deviations.
-            bin_edges (np.ndarray): Array of bin edges.
         """
         plt.figure(figsize=(20, 5))
         plt.title("Binned Light Curve")
@@ -546,8 +622,15 @@ class EclipsingBinaryBinner:
         plt.ylabel("Normalized Flux", fontsize=14)
         plt.xlim(0, 1)
         ylims = plt.ylim()
+
+        # Get eclipse boundaries in original phase space
+        primary_bounds = self._rewrap_to_original_phase(np.array(self.primary_eclipse))
+        secondary_bounds = self._rewrap_to_original_phase(
+            np.array(self.secondary_eclipse)
+        )
+
         plt.vlines(
-            self.get_eclipse_boundaries(primary=True, use_shifted_phases=True),
+            primary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -555,7 +638,7 @@ class EclipsingBinaryBinner:
             label="Primary Eclipse",
         )
         plt.vlines(
-            self.get_eclipse_boundaries(primary=False, use_shifted_phases=True),
+            secondary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -572,16 +655,27 @@ class EclipsingBinaryBinner:
         """
         plt.figure(figsize=(20, 5))
         plt.title("Unbinned Light Curve")
+
+        # Get data in original phase space for plotting
+        original_phases = self._rewrap_to_original_phase(self.data["phases"])
+
         plt.errorbar(
-            self.data["shifted_phases"],
+            original_phases,
             self.data["fluxes"],
             yerr=self.data["flux_errors"],
             linestyle="none",
             marker=".",
         )
         ylims = plt.ylim()
+
+        # Get eclipse boundaries in original phase space
+        primary_bounds = self._rewrap_to_original_phase(np.array(self.primary_eclipse))
+        secondary_bounds = self._rewrap_to_original_phase(
+            np.array(self.secondary_eclipse)
+        )
+
         plt.vlines(
-            self.get_eclipse_boundaries(primary=True, use_shifted_phases=True),
+            primary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
@@ -589,7 +683,7 @@ class EclipsingBinaryBinner:
             label="Primary Eclipse",
         )
         plt.vlines(
-            self.get_eclipse_boundaries(primary=False, use_shifted_phases=True),
+            secondary_bounds,
             ymin=ylims[0],
             ymax=ylims[1],
             linestyle="--",
