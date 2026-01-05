@@ -596,9 +596,9 @@ def test_negative_phase_primary_at_zero(negative_phase_light_curve):
     primary_min_original = binner._denormalize_phases(
         np.array([binner.primary_eclipse_min_phase])
     )[0]
-    assert -0.1 < primary_min_original < 0.1, (
-        f"Primary eclipse should be near phase 0, got {primary_min_original}"
-    )
+    assert (
+        -0.1 < primary_min_original < 0.1
+    ), f"Primary eclipse should be near phase 0, got {primary_min_original}"
 
 
 def test_negative_phase_secondary_wrapped():
