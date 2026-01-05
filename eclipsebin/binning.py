@@ -75,6 +75,22 @@ class EclipsingBinaryBinner:
             "atol_secondary": None,
         }
 
+        # Detect and store original phase range for denormalization later
+        self._original_phase_min = np.min(phases)
+        self._original_phase_max = np.max(phases)
+        self._original_phase_range = self._original_phase_max - self._original_phase_min
+
+        # Normalize phases to [0, 1] if not already
+        if self._original_phase_min < 0 or self._original_phase_max > 1:
+            self._needs_denormalization = True
+            normalized_phases = self._normalize_phases(phases)
+            sort_idx = np.argsort(normalized_phases)
+            self.data["phases"] = normalized_phases[sort_idx]
+            self.data["fluxes"] = fluxes[sort_idx]
+            self.data["flux_errors"] = flux_errors[sort_idx]
+        else:
+            self._needs_denormalization = False
+
         self.set_atol(primary=atol_primary, secondary=atol_secondary)
 
         # Identify primary and secondary eclipse minima (in original phase space)
@@ -94,6 +110,34 @@ class EclipsingBinaryBinner:
             # Recalculate eclipse boundaries in unwrapped space
             self.primary_eclipse = self.get_eclipse_boundaries(primary=True)
             self.secondary_eclipse = self.get_eclipse_boundaries(primary=False)
+
+    def _normalize_phases(self, phases):
+        """
+        Normalize phases from original range to [0, 1].
+
+        Args:
+            phases (np.ndarray): Phases in original range
+
+        Returns:
+            np.ndarray: Phases normalized to [0, 1]
+        """
+        # Shift so minimum is at 0, then scale to [0, 1]
+        return (phases - self._original_phase_min) / self._original_phase_range
+
+    def _denormalize_phases(self, phases):
+        """
+        Convert phases from [0, 1] back to original range.
+
+        Args:
+            phases (np.ndarray): Phases in [0, 1] range
+
+        Returns:
+            np.ndarray: Phases in original range
+        """
+        if not self._needs_denormalization:
+            return phases
+        # Scale from [0, 1] back to original range
+        return phases * self._original_phase_range + self._original_phase_min
 
     def find_minimum_flux_phase(self):
         """
@@ -426,17 +470,20 @@ class EclipsingBinaryBinner:
 
     def _rewrap_to_original_phase(self, phases_array):
         """
-        Rewrap phases back to original phase space before unwrapping.
+        Rewrap phases back to original phase space before unwrapping,
+        then denormalize if original input had non-standard range.
 
         Args:
-            phases_array (np.ndarray): Array of phases in unwrapped space
+            phases_array (np.ndarray): Array of phases in unwrapped [0, 1] space
 
         Returns:
             np.ndarray: Phases shifted back to original space
         """
-        if self._phase_shift == 0.0:
-            return phases_array
-        return (phases_array - self._phase_shift) % 1.0
+        result = phases_array
+        if self._phase_shift != 0.0:
+            result = (result - self._phase_shift) % 1.0
+        # Denormalize back to original range (e.g., [-0.5, 0.5])
+        return self._denormalize_phases(result)
 
     def calculate_bins(self, return_in_original_phase=True):
         """
@@ -620,7 +667,10 @@ class EclipsingBinaryBinner:
         )
         plt.xlabel("Phases", fontsize=14)
         plt.ylabel("Normalized Flux", fontsize=14)
-        plt.xlim(0, 1)
+        if self._needs_denormalization:
+            plt.xlim(self._original_phase_min, self._original_phase_max)
+        else:
+            plt.xlim(0, 1)
         ylims = plt.ylim()
 
         # Get eclipse boundaries in original phase space
@@ -691,7 +741,10 @@ class EclipsingBinaryBinner:
             label="Secondary Eclipse",
         )
         plt.ylim(ylims)
-        plt.xlim(0, 1)
+        if self._needs_denormalization:
+            plt.xlim(self._original_phase_min, self._original_phase_max)
+        else:
+            plt.xlim(0, 1)
         plt.ylabel("Normalized Flux", fontsize=14)
         plt.xlabel("Phases", fontsize=14)
         plt.legend()
