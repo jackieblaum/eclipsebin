@@ -7,7 +7,244 @@ of eclipsing binary star light curves.
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.signal import savgol_filter
+from scipy.ndimage import uniform_filter1d
 import matplotlib.pyplot as plt
+import warnings
+
+
+def _detect_eclipse_edges_slope(
+    phases,
+    fluxes,
+    sigmas=None,
+    smoothing_window=None,
+    slope_threshold_percentile=90.0,
+    return_threshold_fraction=0.1,
+    min_eclipse_depth=0.01,
+):
+    """
+    Detect eclipse boundaries using slope/derivative-based edge detection.
+    
+    This method is robust to ellipsoidal variations because it detects edges
+    based on local slope changes rather than absolute flux levels.
+    
+    Parameters
+    ----------
+    phases : array
+        Phase values (should be sorted and in [0, 1))
+    fluxes : array
+        Flux values (normalized to median~1 recommended)
+    sigmas : array, optional
+        Per-point uncertainties
+    smoothing_window : int, optional
+        Window size for Savitzky-Golay smoothing (must be odd).
+        If None, auto-selects based on data density (~5% of points, minimum 5)
+    slope_threshold_percentile : float, default=90.0
+        Percentile of absolute slopes to use as threshold for detecting
+        steep ingress/egress. Higher = more selective.
+    return_threshold_fraction : float, default=0.1
+        Fraction of maximum slope to use for defining boundary.
+        Lower = boundaries closer to eclipse center.
+    min_eclipse_depth : float, default=0.01
+        Minimum flux drop to consider as eclipse (relative to local baseline)
+    
+    Returns
+    -------
+    eclipse_boundaries : list of tuples
+        List of (ingress_phase, egress_phase) for each detected eclipse.
+        Empty list if no eclipses detected.
+    """
+    phases = np.asarray(phases, dtype=float)
+    fluxes = np.asarray(fluxes, dtype=float)
+    
+    if len(phases) < 10:
+        return []
+    
+    # Ensure sorted
+    idx = np.argsort(phases)
+    phases = phases[idx]
+    fluxes = fluxes[idx]
+    
+    # Auto-select smoothing window if not provided
+    if smoothing_window is None:
+        n_points = len(phases)
+        window = max(5, int(0.05 * n_points))
+        # Must be odd for Savitzky-Golay
+        if window % 2 == 0:
+            window += 1
+        smoothing_window = min(window, n_points - 2)
+        if smoothing_window < 5:
+            smoothing_window = 5
+    
+    # Smooth the light curve to reduce noise
+    try:
+        smoothed_fluxes = savgol_filter(fluxes, smoothing_window, 3)
+    except Exception:
+        # Fallback to simple moving average if Savitzky-Golay fails
+        smoothed_fluxes = uniform_filter1d(fluxes, size=smoothing_window)
+    
+    # Compute derivative (slope) using finite differences
+    dphase = np.diff(phases)
+    dflux = np.diff(smoothed_fluxes)
+    
+    # Handle phase wrapping: if gap is large, don't compute slope across it
+    median_dphase = np.median(dphase[dphase > 0])
+    large_gap = dphase > 10 * median_dphase
+    
+    slopes = np.zeros_like(phases)
+    slopes[1:] = dflux / (dphase + 1e-10)  # Avoid division by zero
+    # Set slopes to zero where there are large gaps (indexing matches slopes[1:])
+    slopes[1:][large_gap] = 0.0
+    
+    # Compute absolute slopes for thresholding
+    abs_slopes = np.abs(slopes)
+    
+    # Determine threshold based on percentile
+    valid_slopes = abs_slopes[abs_slopes > 0]
+    if len(valid_slopes) == 0:
+        return []
+    
+    slope_threshold = np.percentile(valid_slopes, slope_threshold_percentile)
+    return_threshold = slope_threshold * return_threshold_fraction
+    
+    # Find regions with steep negative slopes (ingress) and positive slopes (egress)
+    ingress_mask = slopes < -slope_threshold
+    egress_mask = slopes > slope_threshold
+    
+    # Find eclipse candidates by looking for ingress-egress pairs
+    eclipse_boundaries = []
+    ingress_indices = np.where(ingress_mask)[0]
+    egress_indices = np.where(egress_mask)[0]
+    
+    if len(ingress_indices) == 0 or len(egress_indices) == 0:
+        return []
+    
+    # Pair up ingress and egress points
+    i = 0
+    while i < len(ingress_indices):
+        ingress_idx = ingress_indices[i]
+        egress_candidates = egress_indices[egress_indices > ingress_idx]
+        
+        if len(egress_candidates) > 0:
+            egress_idx = egress_candidates[0]
+            
+            # Check if this is a real eclipse (flux drops significantly)
+            eclipse_region = smoothed_fluxes[ingress_idx:egress_idx+1]
+            if len(eclipse_region) > 0:
+                local_baseline = np.median([
+                    np.median(smoothed_fluxes[max(0, ingress_idx-10):ingress_idx]),
+                    np.median(smoothed_fluxes[egress_idx:min(len(fluxes), egress_idx+10)])
+                ])
+                min_flux = np.min(eclipse_region)
+                depth = (local_baseline - min_flux) / local_baseline
+                
+                if depth >= min_eclipse_depth:
+                    # Refine boundaries: find where slope crosses return_threshold
+                    ingress_refined = ingress_idx
+                    for j in range(ingress_idx, max(0, ingress_idx-20), -1):
+                        if abs_slopes[j] < return_threshold:
+                            ingress_refined = j
+                            break
+                    
+                    egress_refined = egress_idx
+                    for j in range(egress_idx, min(len(phases), egress_idx+20)):
+                        if abs_slopes[j] < return_threshold:
+                            egress_refined = j
+                            break
+                    
+                    eclipse_boundaries.append((
+                        phases[ingress_refined],
+                        phases[egress_refined]
+                    ))
+                    
+                    # Skip to after this egress
+                    i = np.searchsorted(ingress_indices, egress_idx, side='right')
+                    continue
+        
+        i += 1
+    
+    return eclipse_boundaries
+
+
+def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
+    """
+    Identify which detected eclipse is primary vs secondary based on depth and phase separation.
+    
+    Parameters
+    ----------
+    eclipse_boundaries : list of tuples
+        List of (ingress, egress) phase pairs
+    phases : array
+        Phase values
+    fluxes : array
+        Flux values
+    
+    Returns
+    -------
+    primary_boundaries : tuple or None
+        (ingress, egress) for primary eclipse
+    secondary_boundaries : tuple or None
+        (ingress, egress) for secondary eclipse
+    """
+    if len(eclipse_boundaries) == 0:
+        return None, None
+    
+    if len(eclipse_boundaries) == 1:
+        # Only one eclipse detected - assume it's primary
+        return eclipse_boundaries[0], None
+    
+    # Calculate depths and centers for each eclipse
+    eclipse_info = []
+    for ingress, egress in eclipse_boundaries:
+        # Find indices
+        ingress_idx = np.argmin(np.abs(phases - ingress))
+        egress_idx = np.argmin(np.abs(phases - egress))
+        
+        # Calculate local baseline
+        local_baseline = np.median([
+            np.median(fluxes[max(0, ingress_idx-10):ingress_idx]),
+            np.median(fluxes[egress_idx:min(len(fluxes), egress_idx+10)])
+        ])
+        
+        # Find minimum in eclipse region
+        eclipse_region = fluxes[min(ingress_idx, egress_idx):max(ingress_idx, egress_idx)+1]
+        min_flux = np.min(eclipse_region)
+        depth = (local_baseline - min_flux) / local_baseline
+        
+        # Calculate center phase
+        center_phase = (ingress + egress) / 2.0
+        if egress < ingress:  # Wrapped eclipse
+            center_phase = (ingress + egress + 1.0) / 2.0 % 1.0
+        
+        eclipse_info.append({
+            'boundaries': (ingress, egress),
+            'depth': depth,
+            'center': center_phase
+        })
+    
+    # Primary is the deeper eclipse
+    primary_idx = np.argmax([e['depth'] for e in eclipse_info])
+    primary_boundaries = eclipse_info[primary_idx]['boundaries']
+    primary_center = eclipse_info[primary_idx]['center']
+    
+    # Secondary is the other one, but must be at least 0.2 phase units away
+    secondary_boundaries = None
+    for i, info in enumerate(eclipse_info):
+        if i != primary_idx:
+            # Check phase separation
+            phase_sep = abs(info['center'] - primary_center)
+            if phase_sep > 0.5:
+                phase_sep = 1.0 - phase_sep
+            if phase_sep >= 0.2:  # Secondary should be ~0.5 phase away (or at least 0.2)
+                secondary_boundaries = info['boundaries']
+                break
+    
+    # If no secondary found with proper separation, use the other eclipse anyway
+    if secondary_boundaries is None and len(eclipse_boundaries) > 1:
+        secondary_idx = 1 - primary_idx
+        secondary_boundaries = eclipse_boundaries[secondary_idx]
+    
+    return primary_boundaries, secondary_boundaries
 
 
 class EclipsingBinaryBinner:
@@ -36,6 +273,11 @@ class EclipsingBinaryBinner:
         fraction_in_eclipse=0.2,
         atol_primary=None,
         atol_secondary=None,
+        boundary_method='flux_return',
+        edge_slope_threshold_percentile=90.0,
+        edge_return_threshold_fraction=0.1,
+        edge_min_eclipse_depth=0.01,
+        edge_smoothing_window=None,
     ):
         """
         Initializes the EclipsingBinaryBinner with the given light curve data and parameters.
@@ -47,6 +289,21 @@ class EclipsingBinaryBinner:
             nbins (int, optional): Number of bins to use. Defaults to 200.
             fraction_in_eclipse (float, optional): Fraction of bins within eclipses.
                 Defaults to 0.2.
+            atol_primary (float, optional): Tolerance for primary eclipse boundary detection.
+                Defaults to None (auto-calculated).
+            atol_secondary (float, optional): Tolerance for secondary eclipse boundary detection.
+                Defaults to None (auto-calculated).
+            boundary_method (str, optional): Method for detecting eclipse boundaries.
+                'flux_return' (default): Traditional method finding where flux returns to 1.0.
+                'edge_detection': Slope-based edge detection, robust to ellipsoidal variations.
+            edge_slope_threshold_percentile (float, optional): For edge_detection method,
+                percentile of absolute slopes to use as threshold. Defaults to 90.0.
+            edge_return_threshold_fraction (float, optional): For edge_detection method,
+                fraction of max slope for boundary definition. Defaults to 0.1.
+            edge_min_eclipse_depth (float, optional): For edge_detection method,
+                minimum flux drop to consider as eclipse. Defaults to 0.01.
+            edge_smoothing_window (int, optional): For edge_detection method,
+                window size for smoothing. If None, auto-selected. Defaults to None.
 
         Raises:
             ValueError: If the number of data points is less than 10, or if the number of bins
@@ -74,6 +331,13 @@ class EclipsingBinaryBinner:
             "atol_primary": None,
             "atol_secondary": None,
         }
+        
+        # Store edge detection parameters
+        self.boundary_method = boundary_method
+        self.edge_slope_threshold_percentile = edge_slope_threshold_percentile
+        self.edge_return_threshold_fraction = edge_return_threshold_fraction
+        self.edge_min_eclipse_depth = edge_min_eclipse_depth
+        self.edge_smoothing_window = edge_smoothing_window
 
         # Detect and store original phase range for denormalization later
         self._original_phase_min = np.min(phases)
@@ -258,7 +522,7 @@ class EclipsingBinaryBinner:
 
     def get_eclipse_boundaries(self, primary=True):
         """
-        Finds the start and end phase of an eclipse based on the minimum flux.
+        Finds the start and end phase of an eclipse.
 
         Args:
             primary (bool): If True, get primary eclipse boundaries, else secondary.
@@ -266,6 +530,54 @@ class EclipsingBinaryBinner:
         Returns:
             tuple: Start and end phases of the eclipse.
         """
+        if self.boundary_method == 'edge_detection':
+            # Use edge detection method
+            boundaries = _detect_eclipse_edges_slope(
+                self.data["phases"],
+                self.data["fluxes"],
+                self.data["flux_errors"],
+                smoothing_window=self.edge_smoothing_window,
+                slope_threshold_percentile=self.edge_slope_threshold_percentile,
+                return_threshold_fraction=self.edge_return_threshold_fraction,
+                min_eclipse_depth=self.edge_min_eclipse_depth
+            )
+            
+            if len(boundaries) > 0:
+                # Identify primary and secondary
+                primary_bounds, secondary_bounds = _find_primary_and_secondary_from_edges(
+                    boundaries, self.data["phases"], self.data["fluxes"]
+                )
+                
+                if primary:
+                    if primary_bounds is not None:
+                        return primary_bounds
+                else:
+                    if secondary_bounds is not None:
+                        return secondary_bounds
+                
+                # If requested eclipse not found, fall back to flux_return
+                warnings.warn(
+                    f"Edge detection did not find {'primary' if primary else 'secondary'} "
+                    f"eclipse, falling back to flux_return method"
+                )
+                # Temporarily switch to flux_return for this call
+                original_method = self.boundary_method
+                self.boundary_method = 'flux_return'
+                result = self.get_eclipse_boundaries(primary=primary)
+                self.boundary_method = original_method
+                return result
+            else:
+                # No eclipses detected, fall back to flux_return
+                warnings.warn(
+                    "Edge detection found no eclipses, falling back to flux_return method"
+                )
+                original_method = self.boundary_method
+                self.boundary_method = 'flux_return'
+                result = self.get_eclipse_boundaries(primary=primary)
+                self.boundary_method = original_method
+                return result
+        
+        # Original flux_return method
         phases = self.data["phases"]
         if primary:
             eclipse_min_phase = self.primary_eclipse_min_phase
