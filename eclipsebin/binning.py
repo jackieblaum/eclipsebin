@@ -118,7 +118,8 @@ def _detect_eclipse_edges_slope(
     large_gap = dphase > gap_threshold
     
     slopes = np.zeros_like(phases)
-    slopes[1:] = dflux / (dphase + 1e-10)  # Avoid division by zero
+    # Compute slopes, avoiding division by zero with epsilon
+    slopes[1:] = dflux / (dphase + 1e-10)
     # Set slopes to zero where there are large gaps (indexing matches slopes[1:])
     slopes[1:][large_gap] = 0.0
     
