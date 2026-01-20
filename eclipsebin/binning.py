@@ -74,6 +74,8 @@ def _detect_eclipse_edges_slope(
             'threshold': 0.0,
             'return_threshold': 0.0,
             'smoothing_window': smoothing_window,
+            'baseline_window': 5,  # Would use minimum
+            'refinement_range': 10,  # Would use minimum
             'ingress_candidates': [],
             'egress_candidates': [],
             'detected_count': 0
@@ -109,7 +111,10 @@ def _detect_eclipse_edges_slope(
     
     # Handle phase wrapping: if gap is large, don't compute slope across it
     median_dphase = np.median(dphase[dphase > 0])
-    large_gap = dphase > 10 * median_dphase
+    # Detect gaps that are significantly larger than typical spacing
+    # Use 10x as threshold but ensure it's at least 0.05 phase units
+    gap_threshold = max(10 * median_dphase, 0.05)
+    large_gap = dphase > gap_threshold
     
     slopes = np.zeros_like(phases)
     slopes[1:] = dflux / (dphase + 1e-10)  # Avoid division by zero
@@ -128,6 +133,8 @@ def _detect_eclipse_edges_slope(
             'threshold': 0.0,
             'return_threshold': 0.0,
             'smoothing_window': smoothing_window,
+            'baseline_window': max(5, int(0.02 * len(fluxes))),
+            'refinement_range': max(10, int(0.05 * len(phases))),
             'ingress_candidates': [],
             'egress_candidates': [],
             'detected_count': 0
@@ -153,54 +160,73 @@ def _detect_eclipse_edges_slope(
             'threshold': slope_threshold,
             'return_threshold': return_threshold,
             'smoothing_window': smoothing_window,
+            'baseline_window': max(5, int(0.02 * len(fluxes))),
+            'refinement_range': max(10, int(0.05 * len(phases))),
             'ingress_candidates': ingress_indices.tolist(),
             'egress_candidates': egress_indices.tolist(),
             'detected_count': 0
         }
         return [], diagnostics
     
+    # Adaptive baseline window: 2% of data, minimum 5 points
+    baseline_window = max(5, int(0.02 * len(fluxes)))
+
+    # Adaptive refinement range: 5% of data, minimum 10 points
+    refinement_range = max(10, int(0.05 * len(phases)))
+
     # Pair up ingress and egress points
     i = 0
     while i < len(ingress_indices):
         ingress_idx = ingress_indices[i]
         egress_candidates = egress_indices[egress_indices > ingress_idx]
-        
+
         if len(egress_candidates) > 0:
             egress_idx = egress_candidates[0]
-            
+
             # Check if this is a real eclipse (flux drops significantly)
             eclipse_region = smoothed_fluxes[ingress_idx:egress_idx+1]
             if len(eclipse_region) > 0:
-                local_baseline = np.median([
-                    np.median(smoothed_fluxes[max(0, ingress_idx-10):ingress_idx]),
-                    np.median(smoothed_fluxes[egress_idx:min(len(fluxes), egress_idx+10)])
-                ])
+                # Calculate baseline with validation
+                pre_window_start = max(0, ingress_idx - baseline_window)
+                pre_window_end = ingress_idx
+                post_window_start = egress_idx
+                post_window_end = min(len(fluxes), egress_idx + baseline_window)
+
+                pre_window = smoothed_fluxes[pre_window_start:pre_window_end]
+                post_window = smoothed_fluxes[post_window_start:post_window_end]
+
+                # Need at least 3 points for reliable baseline
+                if len(pre_window) < 3 or len(post_window) < 3:
+                    i += 1
+                    continue
+
+                local_baseline = np.median([np.median(pre_window), np.median(post_window)])
                 min_flux = np.min(eclipse_region)
                 depth = (local_baseline - min_flux) / local_baseline
-                
+
                 if depth >= min_eclipse_depth:
                     # Refine boundaries: find where slope crosses return_threshold
                     ingress_refined = ingress_idx
-                    for j in range(ingress_idx, max(0, ingress_idx-20), -1):
+                    for j in range(ingress_idx, max(0, ingress_idx - refinement_range), -1):
                         if abs_slopes[j] < return_threshold:
                             ingress_refined = j
                             break
-                    
+
                     egress_refined = egress_idx
-                    for j in range(egress_idx, min(len(phases), egress_idx+20)):
+                    for j in range(egress_idx, min(len(phases), egress_idx + refinement_range)):
                         if abs_slopes[j] < return_threshold:
                             egress_refined = j
                             break
-                    
+
                     eclipse_boundaries.append((
                         phases[ingress_refined],
                         phases[egress_refined]
                     ))
-                    
+
                     # Skip to after this egress
                     i = np.searchsorted(ingress_indices, egress_idx, side='right')
                     continue
-        
+
         i += 1
 
     # Build diagnostics dictionary
@@ -210,6 +236,8 @@ def _detect_eclipse_edges_slope(
         'threshold': slope_threshold,
         'return_threshold': return_threshold,
         'smoothing_window': smoothing_window,
+        'baseline_window': baseline_window,
+        'refinement_range': refinement_range,
         'ingress_candidates': ingress_indices.tolist(),
         'egress_candidates': egress_indices.tolist(),
         'detected_count': len(eclipse_boundaries)
