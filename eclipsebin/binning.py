@@ -281,10 +281,10 @@ def _detect_eclipse_edges_slope(
     return eclipse_boundaries, diagnostics
 
 
-def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
+def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes, min_separation=0.2):
     """
     Identify which detected eclipse is primary vs secondary based on depth and phase separation.
-    
+
     Parameters
     ----------
     eclipse_boundaries : list of tuples
@@ -293,7 +293,9 @@ def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
         Phase values
     fluxes : array
         Flux values
-    
+    min_separation : float, optional
+        Minimum phase separation between primary and secondary eclipses. Defaults to 0.2.
+
     Returns
     -------
     primary_boundaries : tuple or None
@@ -342,7 +344,7 @@ def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
     primary_boundaries = eclipse_info[primary_idx]['boundaries']
     primary_center = eclipse_info[primary_idx]['center']
     
-    # Secondary is the other one, but must be at least 0.2 phase units away
+    # Secondary is the other one, but must be at least min_separation phase units away
     secondary_boundaries = None
     for i, info in enumerate(eclipse_info):
         if i != primary_idx:
@@ -350,7 +352,7 @@ def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
             phase_sep = abs(info['center'] - primary_center)
             if phase_sep > 0.5:
                 phase_sep = 1.0 - phase_sep
-            if phase_sep >= 0.2:  # Secondary should be ~0.5 phase away (or at least 0.2)
+            if phase_sep >= min_separation:  # Secondary should be ~0.5 phase away (or at least min_separation)
                 secondary_boundaries = info['boundaries']
                 break
     
@@ -393,6 +395,7 @@ class EclipsingBinaryBinner:
         edge_return_threshold_fraction=0.1,
         edge_min_eclipse_depth=0.01,
         edge_smoothing_window=None,
+        min_eclipse_separation=0.2,
     ):
         """
         Initializes the EclipsingBinaryBinner with the given light curve data and parameters.
@@ -419,6 +422,9 @@ class EclipsingBinaryBinner:
                 minimum flux drop to consider as eclipse. Defaults to 0.01.
             edge_smoothing_window (int, optional): For edge_detection method,
                 window size for smoothing. If None, auto-selected. Defaults to None.
+            min_eclipse_separation (float, optional): Minimum phase separation between
+                primary and secondary eclipses. Defaults to 0.2 (suitable for most
+                circular orbits). Adjust for eccentric systems or close eclipses.
 
         Raises:
             ValueError: If the number of data points is less than 10, or if the number of bins
@@ -453,6 +459,7 @@ class EclipsingBinaryBinner:
         self.edge_return_threshold_fraction = edge_return_threshold_fraction
         self.edge_min_eclipse_depth = edge_min_eclipse_depth
         self.edge_smoothing_window = edge_smoothing_window
+        self.min_eclipse_separation = min_eclipse_separation
 
         # Initialize diagnostics storage
         self._edge_diagnostics = None
@@ -544,7 +551,7 @@ class EclipsingBinaryBinner:
     def find_secondary_minimum_phase(self):
         """
         Finds the phase of the secondary eclipse by identifying the minimum flux
-        at least 0.2 phase units away from the primary eclipse.
+        at least min_eclipse_separation phase units away from the primary eclipse.
 
         Returns:
             float: Phase value of the secondary eclipse minimum.
@@ -566,7 +573,7 @@ class EclipsingBinaryBinner:
     def _helper_secondary_minimum_mask(self):
         phases = self.data["phases"]
         primary_min_phase = self.primary_eclipse_min_phase
-        mask = np.abs(phases - primary_min_phase) > 0.2
+        mask = np.abs(phases - primary_min_phase) > self.min_eclipse_separation
         return phases, mask
 
     def _detect_wrapped_eclipse(self, eclipse_start, eclipse_end):
@@ -666,7 +673,7 @@ class EclipsingBinaryBinner:
             if len(boundaries) > 0:
                 # Identify primary and secondary
                 primary_bounds, secondary_bounds = _find_primary_and_secondary_from_edges(
-                    boundaries, self.data["phases"], self.data["fluxes"]
+                    boundaries, self.data["phases"], self.data["fluxes"], self.min_eclipse_separation
                 )
                 
                 if primary:
