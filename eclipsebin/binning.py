@@ -53,12 +53,32 @@ def _detect_eclipse_edges_slope(
     eclipse_boundaries : list of tuples
         List of (ingress_phase, egress_phase) for each detected eclipse.
         Empty list if no eclipses detected.
+    diagnostics : dict
+        Dictionary containing diagnostic information:
+        - slopes: array of computed slopes at each phase point
+        - smoothed_fluxes: array of smoothed flux values
+        - threshold: slope threshold value used for detection
+        - return_threshold: threshold for boundary refinement
+        - ingress_candidates: list of ingress candidate indices
+        - egress_candidates: list of egress candidate indices
+        - detected_count: number of eclipses detected
     """
     phases = np.asarray(phases, dtype=float)
     fluxes = np.asarray(fluxes, dtype=float)
-    
+
     if len(phases) < 10:
-        return []
+        # Return minimal diagnostics for early return
+        diagnostics = {
+            'slopes': np.array([]),
+            'smoothed_fluxes': np.array([]),
+            'threshold': 0.0,
+            'return_threshold': 0.0,
+            'smoothing_window': smoothing_window,
+            'ingress_candidates': [],
+            'egress_candidates': [],
+            'detected_count': 0
+        }
+        return [], diagnostics
     
     # Ensure sorted
     idx = np.argsort(phases)
@@ -102,22 +122,42 @@ def _detect_eclipse_edges_slope(
     # Determine threshold based on percentile
     valid_slopes = abs_slopes[abs_slopes > 0]
     if len(valid_slopes) == 0:
-        return []
-    
+        diagnostics = {
+            'slopes': slopes,
+            'smoothed_fluxes': smoothed_fluxes,
+            'threshold': 0.0,
+            'return_threshold': 0.0,
+            'smoothing_window': smoothing_window,
+            'ingress_candidates': [],
+            'egress_candidates': [],
+            'detected_count': 0
+        }
+        return [], diagnostics
+
     slope_threshold = np.percentile(valid_slopes, slope_threshold_percentile)
     return_threshold = slope_threshold * return_threshold_fraction
-    
+
     # Find regions with steep negative slopes (ingress) and positive slopes (egress)
     ingress_mask = slopes < -slope_threshold
     egress_mask = slopes > slope_threshold
-    
+
     # Find eclipse candidates by looking for ingress-egress pairs
     eclipse_boundaries = []
     ingress_indices = np.where(ingress_mask)[0]
     egress_indices = np.where(egress_mask)[0]
-    
+
     if len(ingress_indices) == 0 or len(egress_indices) == 0:
-        return []
+        diagnostics = {
+            'slopes': slopes,
+            'smoothed_fluxes': smoothed_fluxes,
+            'threshold': slope_threshold,
+            'return_threshold': return_threshold,
+            'smoothing_window': smoothing_window,
+            'ingress_candidates': ingress_indices.tolist(),
+            'egress_candidates': egress_indices.tolist(),
+            'detected_count': 0
+        }
+        return [], diagnostics
     
     # Pair up ingress and egress points
     i = 0
@@ -162,8 +202,20 @@ def _detect_eclipse_edges_slope(
                     continue
         
         i += 1
-    
-    return eclipse_boundaries
+
+    # Build diagnostics dictionary
+    diagnostics = {
+        'slopes': slopes,
+        'smoothed_fluxes': smoothed_fluxes,
+        'threshold': slope_threshold,
+        'return_threshold': return_threshold,
+        'smoothing_window': smoothing_window,
+        'ingress_candidates': ingress_indices.tolist(),
+        'egress_candidates': egress_indices.tolist(),
+        'detected_count': len(eclipse_boundaries)
+    }
+
+    return eclipse_boundaries, diagnostics
 
 
 def _find_primary_and_secondary_from_edges(eclipse_boundaries, phases, fluxes):
@@ -338,6 +390,9 @@ class EclipsingBinaryBinner:
         self.edge_return_threshold_fraction = edge_return_threshold_fraction
         self.edge_min_eclipse_depth = edge_min_eclipse_depth
         self.edge_smoothing_window = edge_smoothing_window
+
+        # Initialize diagnostics storage
+        self._edge_diagnostics = None
 
         # Detect and store original phase range for denormalization later
         self._original_phase_min = np.min(phases)
@@ -532,7 +587,7 @@ class EclipsingBinaryBinner:
         """
         if self.boundary_method == 'edge_detection':
             # Use edge detection method
-            boundaries = _detect_eclipse_edges_slope(
+            boundaries, diagnostics = _detect_eclipse_edges_slope(
                 self.data["phases"],
                 self.data["fluxes"],
                 self.data["flux_errors"],
@@ -541,7 +596,10 @@ class EclipsingBinaryBinner:
                 return_threshold_fraction=self.edge_return_threshold_fraction,
                 min_eclipse_depth=self.edge_min_eclipse_depth
             )
-            
+
+            # Store diagnostics
+            self._edge_diagnostics = diagnostics
+
             if len(boundaries) > 0:
                 # Identify primary and secondary
                 primary_bounds, secondary_bounds = _find_primary_and_secondary_from_edges(
