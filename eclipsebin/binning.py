@@ -7,6 +7,7 @@ of eclipsing binary star light curves.
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.stats import trim_mean
 from scipy.signal import savgol_filter
 from scipy.ndimage import uniform_filter1d
 import matplotlib.pyplot as plt
@@ -200,7 +201,21 @@ def _detect_eclipse_edges_slope(
                     i += 1
                     continue
 
-                local_baseline = np.median([np.median(pre_window), np.median(post_window)])
+                # Use trimmed mean for robustness against outliers (trim 10% from each end)
+                try:
+                    pre_baseline = trim_mean(pre_window, 0.1) if len(pre_window) >= 5 else np.median(pre_window)
+                    post_baseline = trim_mean(post_window, 0.1) if len(post_window) >= 5 else np.median(post_window)
+                    local_baseline = np.mean([pre_baseline, post_baseline])
+                except Exception:
+                    # Fallback to median if trimmed mean fails
+                    local_baseline = np.median([np.median(pre_window), np.median(post_window)])
+
+                # Validate baseline is reasonable (not too close to zero)
+                if local_baseline < 0.1:
+                    # Baseline too faint for reliable depth calculation
+                    i += 1
+                    continue
+
                 min_flux = np.min(eclipse_region)
                 depth = (local_baseline - min_flux) / local_baseline
 
