@@ -428,15 +428,15 @@ class EclipsingBinaryBinner:
 
         Raises:
             ValueError: If the number of data points is less than 10, or if the number of bins
-                is less than 10, or if the number of data points is less than the number of bins.
+                is less than 10, or if the number of data points is not greater than the number of bins.
         """
         if len(phases) < 10:
             raise ValueError("Number of data points must be at least 10.")
         if nbins < 10:
             raise ValueError("Number of bins must be at least 10.")
-        if len(phases) < 5 * nbins:
+        if len(phases) <= nbins:
             raise ValueError(
-                "Number of data points must be greater than or equal to 5 times the number of bins."
+                "Number of data points must be greater than the number of bins."
             )
         if np.any(flux_errors) <= 0:
             raise ValueError("Flux errors must be > 0.")

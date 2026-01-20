@@ -204,7 +204,7 @@ def test_initialization_invalid_data(unwrapped_light_curve):
     # Data points fewer than bins
     with pytest.raises(
         ValueError,
-        match="Number of data points must be greater than or equal to 5 times the number of bins.",
+        match="Number of data points must be greater than the number of bins.",
     ):
         EclipsingBinaryBinner(phases[:50], fluxes[:50], flux_errors[:50], nbins=60)
 
