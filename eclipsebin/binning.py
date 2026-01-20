@@ -642,9 +642,14 @@ class EclipsingBinaryBinner:
                         return secondary_bounds
                 
                 # If requested eclipse not found, fall back to flux_return
+                eclipse_type = 'primary' if primary else 'secondary'
+                diag_str = f"detected {len(boundaries)} eclipse(s) total"
                 warnings.warn(
-                    f"Edge detection did not find {'primary' if primary else 'secondary'} "
-                    f"eclipse, falling back to flux_return method"
+                    f"Edge detection did not find {eclipse_type} eclipse ({diag_str}). "
+                    f"This may occur if the {eclipse_type} eclipse is very shallow "
+                    f"(depth < {self.edge_min_eclipse_depth}) or if slope threshold "
+                    f"is too high (percentile: {self.edge_slope_threshold_percentile}). "
+                    f"Falling back to flux_return method."
                 )
                 # Temporarily switch to flux_return for this call
                 original_method = self.boundary_method
@@ -654,8 +659,17 @@ class EclipsingBinaryBinner:
                 return result
             else:
                 # No eclipses detected, fall back to flux_return
+                diag_str = (
+                    f"threshold={diagnostics['threshold']:.3e}, "
+                    f"{len(diagnostics['ingress_candidates'])} ingress candidates, "
+                    f"{len(diagnostics['egress_candidates'])} egress candidates"
+                )
                 warnings.warn(
-                    "Edge detection found no eclipses, falling back to flux_return method"
+                    f"Edge detection found no eclipses ({diag_str}). "
+                    f"Consider lowering edge_slope_threshold_percentile "
+                    f"(current: {self.edge_slope_threshold_percentile}) or "
+                    f"edge_min_eclipse_depth (current: {self.edge_min_eclipse_depth}). "
+                    f"Falling back to flux_return method."
                 )
                 original_method = self.boundary_method
                 self.boundary_method = 'flux_return'
