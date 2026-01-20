@@ -244,6 +244,25 @@ def _detect_eclipse_edges_slope(
 
         i += 1
 
+    # Before collecting diagnostics, validate smoothing window
+    if len(eclipse_boundaries) > 0:
+        eclipse_widths = [egress - ingress for ingress, egress in eclipse_boundaries]
+        min_eclipse_width = min(eclipse_widths)
+
+        # Estimate points per eclipse
+        avg_dphase = np.median(dphase[dphase > 0]) if len(dphase) > 0 else 0.001
+        points_per_eclipse = min_eclipse_width / avg_dphase if avg_dphase > 0 else 0
+
+        # Warn if smoothing window is more than 1/3 of narrowest eclipse
+        if points_per_eclipse > 0 and smoothing_window > points_per_eclipse / 3:
+            warnings.warn(
+                f"Smoothing window ({smoothing_window} points) may be too large "
+                f"for narrow eclipses (~{points_per_eclipse:.0f} points wide). "
+                f"Consider reducing edge_smoothing_window or let it auto-select. "
+                f"This may cause missed or poorly-defined eclipse boundaries.",
+                UserWarning
+            )
+
     # Build diagnostics dictionary
     diagnostics = {
         'slopes': slopes,

@@ -51,6 +51,10 @@ def test_missing_eclipse_warning_mentions_eclipse_type():
 
         # May warn about missing secondary
         if len(w) > 0:
-            warning_msg = str(w[0].message)
-            # Should mention which eclipse is missing
-            assert 'primary' in warning_msg.lower() or 'secondary' in warning_msg.lower()
+            # Check all warnings for eclipse-related messages
+            # (may have smoothing warnings first)
+            warning_msgs = [str(warning.message).lower() for warning in w]
+            eclipse_warnings = [msg for msg in warning_msgs
+                              if 'primary' in msg or 'secondary' in msg]
+            # Should have at least one warning mentioning which eclipse is missing
+            assert len(eclipse_warnings) > 0
