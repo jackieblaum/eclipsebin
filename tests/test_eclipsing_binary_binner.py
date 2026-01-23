@@ -47,6 +47,7 @@ def unwrapped_light_curve():
     """
     Fixture to set up an unwrapped eclipsing binary light curve.
     """
+    np.random.seed(42)  # Ensure reproducible random sampling
     # Increase the number of original points to have enough for random sampling
     phases = np.linspace(0, 0.999, 10000)
     fluxes = np.ones_like(phases)
@@ -89,44 +90,133 @@ def tess_unwrapped_light_curve():
 
 @pytest.mark.parametrize("fraction_in_eclipse", [0.1, 0.2, 0.3, 0.4, 0.5])
 @pytest.mark.parametrize("nbins", [50, 100, 200])
-def test_unwrapped_light_curves(
+def test_synthetic_unwrapped_light_curve(
     unwrapped_light_curve,
+    fraction_in_eclipse,
+    nbins,
+):
+    """
+    Test synthetic unwrapped light curve (5000 points).
+    Can handle all parameter combinations.
+    """
+    phases, fluxes, flux_errors = unwrapped_light_curve
+    helper_eclipse_detection(
+        phases,
+        fluxes,
+        flux_errors,
+        nbins,
+        fraction_in_eclipse,
+        wrapped=None,  # No longer used - kept for compatibility
+    )
+    helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_calculate_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_calculate_out_of_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+
+
+@pytest.mark.parametrize("fraction_in_eclipse", [0.1, 0.2, 0.3, 0.4, 0.5])
+@pytest.mark.parametrize("nbins", [50, 100, 200])
+def test_asas_sn_unwrapped_light_curve(
     asas_sn_unwrapped_light_curve,
+    fraction_in_eclipse,
+    nbins,
+):
+    """
+    Test ASAS-SN real unwrapped light curve (1612 points).
+    Can handle all parameter combinations.
+    """
+    phases, fluxes, flux_errors = asas_sn_unwrapped_light_curve
+    helper_eclipse_detection(
+        phases,
+        fluxes,
+        flux_errors,
+        nbins,
+        fraction_in_eclipse,
+        wrapped=None,  # No longer used - kept for compatibility
+    )
+    helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_calculate_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_calculate_out_of_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+
+
+@pytest.mark.parametrize("fraction_in_eclipse", [0.2, 0.3, 0.4, 0.5])
+@pytest.mark.parametrize("nbins", [50, 100, 200])
+def test_tess_unwrapped_light_curve(
     tess_unwrapped_light_curve,
     fraction_in_eclipse,
     nbins,
 ):
     """
-    Call tests on the light curves in which neither the primary nor
-    secondary eclipse crosses the 1-0 phase boundary.
+    Test TESS real unwrapped light curve (1000 points).
+    Skip fraction=0.1 with high bin counts to avoid pathological combinations.
     """
-    unwrapped_light_curves = [
-        unwrapped_light_curve,
-        asas_sn_unwrapped_light_curve,
-        tess_unwrapped_light_curve,
-    ]
-    for phases, fluxes, flux_errors in unwrapped_light_curves:
-        helper_eclipse_detection(
-            phases,
-            fluxes,
-            flux_errors,
-            nbins,
-            fraction_in_eclipse,
-            wrapped=None,  # No longer used - kept for compatibility
-        )
-        helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-        helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-        helper_find_eclipse_minima(
-            phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-        )
-        helper_calculate_eclipse_bins(
-            phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-        )
-        helper_calculate_out_of_eclipse_bins(
-            phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-        )
-        helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-        helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    phases, fluxes, flux_errors = tess_unwrapped_light_curve
+    helper_eclipse_detection(
+        phases,
+        fluxes,
+        flux_errors,
+        nbins,
+        fraction_in_eclipse,
+        wrapped=None,  # No longer used - kept for compatibility
+    )
+    helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_calculate_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_calculate_out_of_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+
+
+@pytest.mark.parametrize("fraction_in_eclipse", [0.1])
+@pytest.mark.parametrize("nbins", [50])
+def test_tess_unwrapped_light_curve_low_fraction(
+    tess_unwrapped_light_curve,
+    fraction_in_eclipse,
+    nbins,
+):
+    """
+    Test TESS with fraction=0.1, but only with nbins=50 (avoids data shortage).
+    """
+    phases, fluxes, flux_errors = tess_unwrapped_light_curve
+    helper_eclipse_detection(
+        phases,
+        fluxes,
+        flux_errors,
+        nbins,
+        fraction_in_eclipse,
+        wrapped=None,  # No longer used - kept for compatibility
+    )
+    helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_calculate_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_calculate_out_of_eclipse_bins(
+        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
+    )
+    helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
+    helper_plot_functions(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
 
 
 @pytest.mark.parametrize("fraction_in_eclipse", [0.1, 0.2, 0.3, 0.4, 0.5])
@@ -204,7 +294,7 @@ def test_initialization_invalid_data(unwrapped_light_curve):
     # Data points fewer than bins
     with pytest.raises(
         ValueError,
-        match="Number of data points must be greater than or equal to 5 times the number of bins.",
+        match="Number of data points must be greater than the number of bins.",
     ):
         EclipsingBinaryBinner(phases[:50], fluxes[:50], flux_errors[:50], nbins=60)
 
@@ -407,21 +497,7 @@ def helper_bin_calculation(phases, fluxes, flux_errors, nbins, fraction_in_eclip
         fraction_in_eclipse=fraction_in_eclipse,
     )
 
-    try:
-        bin_centers, bin_means, bin_errors, bin_numbers, _ = binner.calculate_bins()
-    except ValueError as e:
-        # Some parameter combinations are pathological and expected to fail
-        # after exhausting graceful degradation (e.g., very high bin counts
-        # with very low fraction_in_eclipse on synthetic test data)
-        if "Not enough data" in str(e) and fraction_in_eclipse == 0.1 and nbins >= 100:
-            pytest.skip(
-                f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}"
-            )
-        if "Not enough data" in str(e) and fraction_in_eclipse == 0.3 and nbins == 200:
-            pytest.skip(
-                f"Pathological parameter combination: nbins={nbins}, fraction={fraction_in_eclipse}"
-            )
-        raise
+    bin_centers, bin_means, bin_errors, bin_numbers, _ = binner.calculate_bins()
 
     assert len(bin_centers) > 0
     assert len(bin_means) == len(bin_centers)
