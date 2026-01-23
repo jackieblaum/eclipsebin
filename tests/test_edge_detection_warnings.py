@@ -3,6 +3,7 @@ import numpy as np
 import warnings
 from eclipsebin.binning import EclipsingBinaryBinner
 
+
 def test_no_eclipses_warning_is_informative():
     """Test that warning provides actionable guidance when no eclipses found."""
     # Create flat light curve (no eclipses)
@@ -14,9 +15,7 @@ def test_no_eclipses_warning_is_informative():
         warnings.simplefilter("always")
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Should have issued a warning
@@ -27,9 +26,10 @@ def test_no_eclipses_warning_is_informative():
         # 1. What failed (no eclipses found)
         # 2. Diagnostic info (thresholds, candidates)
         # 3. Actionable suggestion (parameter to adjust)
-        assert 'no eclipses' in warning_msg.lower() or 'not find' in warning_msg.lower()
-        assert 'edge_' in warning_msg  # Mentions parameter names
-        assert 'percentile' in warning_msg.lower() or 'depth' in warning_msg.lower()
+        assert "no eclipses" in warning_msg.lower() or "not find" in warning_msg.lower()
+        assert "edge_" in warning_msg  # Mentions parameter names
+        assert "percentile" in warning_msg.lower() or "depth" in warning_msg.lower()
+
 
 def test_missing_eclipse_warning_mentions_eclipse_type():
     """Test that warning specifies which eclipse (primary/secondary) wasn't found."""
@@ -44,9 +44,7 @@ def test_missing_eclipse_warning_mentions_eclipse_type():
         warnings.simplefilter("always")
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # May warn about missing secondary
@@ -54,7 +52,8 @@ def test_missing_eclipse_warning_mentions_eclipse_type():
             # Check all warnings for eclipse-related messages
             # (may have smoothing warnings first)
             warning_msgs = [str(warning.message).lower() for warning in w]
-            eclipse_warnings = [msg for msg in warning_msgs
-                              if 'primary' in msg or 'secondary' in msg]
+            eclipse_warnings = [
+                msg for msg in warning_msgs if "primary" in msg or "secondary" in msg
+            ]
             # Should have at least one warning mentioning which eclipse is missing
             assert len(eclipse_warnings) > 0

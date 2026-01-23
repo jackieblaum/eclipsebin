@@ -2,6 +2,7 @@
 import numpy as np
 from eclipsebin.binning import EclipsingBinaryBinner
 
+
 def test_default_secondary_separation():
     """Test default secondary eclipse separation is 0.2."""
     phases = np.linspace(0, 1, 1000)
@@ -15,14 +16,13 @@ def test_default_secondary_separation():
     flux_errors = np.ones_like(phases) * 0.01
 
     binner = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors,
-        nbins=200,
-        boundary_method='edge_detection'
+        phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
     )
 
     # Should detect both eclipses with default separation
     assert binner.primary_eclipse is not None
     assert binner.secondary_eclipse is not None
+
 
 def test_custom_secondary_separation():
     """Test custom minimum secondary eclipse separation."""
@@ -38,21 +38,22 @@ def test_custom_secondary_separation():
 
     # With default (0.2), secondary might not be detected
     binner_default = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors,
-        nbins=200,
-        boundary_method='edge_detection'
+        phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
     )
 
     # With custom (0.1), secondary should be detected
     binner_custom = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors,
+        phases,
+        fluxes,
+        flux_errors,
         nbins=200,
-        boundary_method='edge_detection',
-        min_eclipse_separation=0.1
+        boundary_method="edge_detection",
+        min_eclipse_separation=0.1,
     )
 
     # Custom should be more permissive
     assert binner_custom.min_eclipse_separation == 0.1
+
 
 def test_separation_affects_secondary_detection():
     """Test that separation parameter affects which eclipse is considered secondary."""
@@ -68,18 +69,22 @@ def test_separation_affects_secondary_detection():
 
     # Strict separation might only detect primary
     binner_strict = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors,
+        phases,
+        fluxes,
+        flux_errors,
         nbins=200,
-        boundary_method='edge_detection',
-        min_eclipse_separation=0.4  # Very strict
+        boundary_method="edge_detection",
+        min_eclipse_separation=0.4,  # Very strict
     )
 
     # Permissive separation should detect more
     binner_permissive = EclipsingBinaryBinner(
-        phases, fluxes, flux_errors,
+        phases,
+        fluxes,
+        flux_errors,
         nbins=200,
-        boundary_method='edge_detection',
-        min_eclipse_separation=0.1  # Very permissive
+        boundary_method="edge_detection",
+        min_eclipse_separation=0.1,  # Very permissive
     )
 
     # Both should detect primary

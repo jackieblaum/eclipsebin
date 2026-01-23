@@ -109,9 +109,7 @@ def test_synthetic_unwrapped_light_curve(
     )
     helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-    helper_find_eclipse_minima(
-        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-    )
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_calculate_eclipse_bins(
         phases, fluxes, flux_errors, nbins, fraction_in_eclipse
     )
@@ -144,9 +142,7 @@ def test_asas_sn_unwrapped_light_curve(
     )
     helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-    helper_find_eclipse_minima(
-        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-    )
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_calculate_eclipse_bins(
         phases, fluxes, flux_errors, nbins, fraction_in_eclipse
     )
@@ -179,9 +175,7 @@ def test_tess_unwrapped_light_curve(
     )
     helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-    helper_find_eclipse_minima(
-        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-    )
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_calculate_eclipse_bins(
         phases, fluxes, flux_errors, nbins, fraction_in_eclipse
     )
@@ -213,9 +207,7 @@ def test_tess_unwrapped_light_curve_low_fraction(
     )
     helper_initialization(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_find_bin_edges(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
-    helper_find_eclipse_minima(
-        phases, fluxes, flux_errors, nbins, fraction_in_eclipse
-    )
+    helper_find_eclipse_minima(phases, fluxes, flux_errors, nbins, fraction_in_eclipse)
     helper_calculate_eclipse_bins(
         phases, fluxes, flux_errors, nbins, fraction_in_eclipse
     )

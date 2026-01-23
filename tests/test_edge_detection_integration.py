@@ -1,16 +1,18 @@
 """
 Comprehensive integration tests for edge detection with ellipsoidal variations.
 """
+
 import numpy as np
 import pytest
 from eclipsebin.binning import EclipsingBinaryBinner
+
 
 def create_synthetic_light_curve_with_ellipsoidal(
     n_points=1000,
     primary_depth=0.3,
     secondary_depth=0.15,
     ellipsoidal_amplitude=0.05,
-    noise_level=0.01
+    noise_level=0.01,
 ):
     """
     Create synthetic light curve with eclipses and ellipsoidal variations.
@@ -39,12 +41,16 @@ def create_synthetic_light_curve_with_ellipsoidal(
 
     # Add primary eclipse centered at phase 0.0
     primary_mask = (phases < 0.1) | (phases > 0.9)
-    primary_depth_curve = primary_depth * np.exp(-((phases[primary_mask] % 1.0 - 0.0) ** 2) / 0.005)
+    primary_depth_curve = primary_depth * np.exp(
+        -((phases[primary_mask] % 1.0 - 0.0) ** 2) / 0.005
+    )
     fluxes[primary_mask] -= primary_depth_curve
 
     # Add secondary eclipse centered at phase 0.5
     secondary_mask = (phases > 0.4) & (phases < 0.6)
-    secondary_depth_curve = secondary_depth * np.exp(-((phases[secondary_mask] - 0.5) ** 2) / 0.005)
+    secondary_depth_curve = secondary_depth * np.exp(
+        -((phases[secondary_mask] - 0.5) ** 2) / 0.005
+    )
     fluxes[secondary_mask] -= secondary_depth_curve
 
     # Add noise
@@ -65,9 +71,7 @@ class TestEdgeDetectionIntegration:
         )
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Should detect both eclipses
@@ -87,16 +91,12 @@ class TestEdgeDetectionIntegration:
 
         # Edge detection
         binner_edge = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Flux return method
         binner_flux = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='flux_return'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="flux_return"
         )
 
         # Both should detect eclipses
@@ -114,30 +114,30 @@ class TestEdgeDetectionIntegration:
     def test_handles_sparse_data(self):
         """Test edge detection with sparse data."""
         phases, fluxes, flux_errors = create_synthetic_light_curve_with_ellipsoidal(
-            n_points=100,  # Sparse
-            noise_level=0.02
+            n_points=100, noise_level=0.02  # Sparse
         )
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
+            phases,
+            fluxes,
+            flux_errors,
             nbins=50,  # Fewer bins for sparse data
-            boundary_method='edge_detection'
+            boundary_method="edge_detection",
         )
 
         # Should handle gracefully (may or may not detect eclipses)
-        assert binner.primary_eclipse is not None or binner.secondary_eclipse is not None
+        assert (
+            binner.primary_eclipse is not None or binner.secondary_eclipse is not None
+        )
 
     def test_handles_dense_noisy_data(self):
         """Test edge detection with dense but noisy data."""
         phases, fluxes, flux_errors = create_synthetic_light_curve_with_ellipsoidal(
-            n_points=10000,  # Dense
-            noise_level=0.05  # Noisy
+            n_points=10000, noise_level=0.05  # Dense  # Noisy
         )
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=500,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=500, boundary_method="edge_detection"
         )
 
         # Should still detect eclipses despite noise
@@ -150,15 +150,17 @@ class TestEdgeDetectionIntegration:
             primary_depth=0.05,  # Very shallow
             secondary_depth=0.03,
             ellipsoidal_amplitude=0.02,
-            noise_level=0.005
+            noise_level=0.005,
         )
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
+            phases,
+            fluxes,
+            flux_errors,
             nbins=200,
-            boundary_method='edge_detection',
+            boundary_method="edge_detection",
             edge_min_eclipse_depth=0.02,  # Lower threshold for shallow eclipses
-            edge_slope_threshold_percentile=85  # More sensitive
+            edge_slope_threshold_percentile=85,  # More sensitive
         )
 
         # Should detect at least primary
@@ -179,9 +181,7 @@ class TestEdgeDetectionIntegration:
         flux_errors = np.ones_like(phases) * 0.01
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Should handle wrapped eclipse
@@ -193,53 +193,52 @@ class TestEdgeDetectionIntegration:
         phases, fluxes, flux_errors = create_synthetic_light_curve_with_ellipsoidal()
 
         binner = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Diagnostics should be available
-        assert hasattr(binner, '_edge_diagnostics')
+        assert hasattr(binner, "_edge_diagnostics")
         assert binner._edge_diagnostics is not None
 
         diag = binner._edge_diagnostics
-        assert 'threshold' in diag
-        assert 'detected_count' in diag
-        assert diag['detected_count'] >= 1  # At least one eclipse
+        assert "threshold" in diag
+        assert "detected_count" in diag
+        assert diag["detected_count"] >= 1  # At least one eclipse
 
     def test_parameter_tuning(self):
         """Test that adjusting parameters improves detection."""
         phases, fluxes, flux_errors = create_synthetic_light_curve_with_ellipsoidal(
-            primary_depth=0.08,  # Moderate depth
-            ellipsoidal_amplitude=0.06
+            primary_depth=0.08, ellipsoidal_amplitude=0.06  # Moderate depth
         )
 
         # Conservative parameters (may miss secondary)
         binner_conservative = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
+            phases,
+            fluxes,
+            flux_errors,
             nbins=200,
-            boundary_method='edge_detection',
+            boundary_method="edge_detection",
             edge_slope_threshold_percentile=95,  # Very strict
-            edge_min_eclipse_depth=0.05
+            edge_min_eclipse_depth=0.05,
         )
 
         # Sensitive parameters
         binner_sensitive = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
+            phases,
+            fluxes,
+            flux_errors,
             nbins=200,
-            boundary_method='edge_detection',
+            boundary_method="edge_detection",
             edge_slope_threshold_percentile=85,  # More permissive
-            edge_min_eclipse_depth=0.02
+            edge_min_eclipse_depth=0.02,
         )
 
         # Sensitive should detect as many or more eclipses
-        conservative_count = (
-            (binner_conservative.primary_eclipse is not None) +
-            (binner_conservative.secondary_eclipse is not None)
+        conservative_count = (binner_conservative.primary_eclipse is not None) + (
+            binner_conservative.secondary_eclipse is not None
         )
-        sensitive_count = (
-            (binner_sensitive.primary_eclipse is not None) +
-            (binner_sensitive.secondary_eclipse is not None)
+        sensitive_count = (binner_sensitive.primary_eclipse is not None) + (
+            binner_sensitive.secondary_eclipse is not None
         )
 
         assert sensitive_count >= conservative_count
@@ -257,15 +256,11 @@ class TestEdgeDetectionVsFluxReturn:
         flux_errors = np.ones_like(phases) * 0.01
 
         binner_edge = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         binner_flux = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='flux_return'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="flux_return"
         )
 
         # Both should detect eclipses
@@ -280,9 +275,7 @@ class TestEdgeDetectionVsFluxReturn:
 
         # Edge detection should handle this better
         binner_edge = EclipsingBinaryBinner(
-            phases, fluxes, flux_errors,
-            nbins=200,
-            boundary_method='edge_detection'
+            phases, fluxes, flux_errors, nbins=200, boundary_method="edge_detection"
         )
 
         # Should successfully detect both eclipses

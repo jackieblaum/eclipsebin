@@ -1,6 +1,7 @@
 import numpy as np
 from eclipsebin.binning import _detect_eclipse_edges_slope
 
+
 def test_baseline_window_scales_with_data_density():
     """Test that baseline window adapts to data density."""
     # Sparse data (100 points)
@@ -26,20 +27,21 @@ def test_baseline_window_scales_with_data_density():
     assert len(boundaries_dense) > 0
 
     # Diagnostic should show different smoothing windows
-    assert 'smoothing_window' in diag_sparse
-    assert 'smoothing_window' in diag_dense
+    assert "smoothing_window" in diag_sparse
+    assert "smoothing_window" in diag_dense
     # Dense data should have larger window
-    assert diag_dense['smoothing_window'] > diag_sparse['smoothing_window']
+    assert diag_dense["smoothing_window"] > diag_sparse["smoothing_window"]
 
     # Check that baseline window and refinement range diagnostics exist
-    assert 'baseline_window' in diag_sparse
-    assert 'baseline_window' in diag_dense
-    assert 'refinement_range' in diag_sparse
-    assert 'refinement_range' in diag_dense
+    assert "baseline_window" in diag_sparse
+    assert "baseline_window" in diag_dense
+    assert "refinement_range" in diag_sparse
+    assert "refinement_range" in diag_dense
 
     # Dense data should use larger baseline window and refinement range
-    assert diag_dense['baseline_window'] > diag_sparse['baseline_window']
-    assert diag_dense['refinement_range'] > diag_sparse['refinement_range']
+    assert diag_dense["baseline_window"] > diag_sparse["baseline_window"]
+    assert diag_dense["refinement_range"] > diag_sparse["refinement_range"]
+
 
 def test_refinement_range_adapts_to_data():
     """Test that boundary refinement range scales with data."""
@@ -56,6 +58,7 @@ def test_refinement_range_adapts_to_data():
     # Should not crash and should detect eclipse
     assert len(boundaries) >= 0  # May or may not detect with very sparse data
 
+
 def test_adaptive_constants_minimum_values():
     """Test that adaptive constants have reasonable minimum values."""
     # Very sparse data (minimum viable)
@@ -66,18 +69,18 @@ def test_adaptive_constants_minimum_values():
     boundaries, diagnostics = _detect_eclipse_edges_slope(phases, fluxes)
 
     # Even with sparse data, should have minimum values
-    if 'baseline_window' in diagnostics:
-        assert diagnostics['baseline_window'] >= 5  # Minimum 5 points
-    if 'refinement_range' in diagnostics:
-        assert diagnostics['refinement_range'] >= 10  # Minimum 10 points
+    if "baseline_window" in diagnostics:
+        assert diagnostics["baseline_window"] >= 5  # Minimum 5 points
+    if "refinement_range" in diagnostics:
+        assert diagnostics["refinement_range"] >= 10  # Minimum 10 points
+
 
 def test_gap_detection_adapts():
     """Test that gap detection threshold adapts properly."""
     # Create data with irregular spacing
-    phases = np.concatenate([
-        np.linspace(0, 0.3, 100),
-        np.linspace(0.7, 1.0, 100)  # Large gap in middle
-    ])
+    phases = np.concatenate(
+        [np.linspace(0, 0.3, 100), np.linspace(0.7, 1.0, 100)]  # Large gap in middle
+    )
     fluxes = np.ones_like(phases)
     fluxes[40:50] = 0.8  # Eclipse in first region
 

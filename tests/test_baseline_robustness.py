@@ -29,11 +29,13 @@ def test_baseline_handles_outliers():
 def test_baseline_handles_sparse_edges():
     """Test baseline calculation with very few points near eclipse edges."""
     # Sparse sampling with gaps
-    phases = np.concatenate([
-        np.linspace(0, 0.4, 50),
-        np.linspace(0.45, 0.55, 200),  # Dense in eclipse
-        np.linspace(0.6, 1.0, 50)
-    ])
+    phases = np.concatenate(
+        [
+            np.linspace(0, 0.4, 50),
+            np.linspace(0.45, 0.55, 200),  # Dense in eclipse
+            np.linspace(0.6, 1.0, 50),
+        ]
+    )
     fluxes = np.ones_like(phases)
     eclipse_mask = (phases >= 0.48) & (phases <= 0.52)
     fluxes[eclipse_mask] = 0.75
