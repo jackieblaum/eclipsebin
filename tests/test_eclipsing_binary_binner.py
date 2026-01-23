@@ -47,6 +47,7 @@ def unwrapped_light_curve():
     """
     Fixture to set up an unwrapped eclipsing binary light curve.
     """
+    np.random.seed(42)  # Ensure reproducible random sampling
     # Increase the number of original points to have enough for random sampling
     phases = np.linspace(0, 0.999, 10000)
     fluxes = np.ones_like(phases)
